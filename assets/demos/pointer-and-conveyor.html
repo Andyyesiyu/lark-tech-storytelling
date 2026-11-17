@@ -1,0 +1,1219 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="use-iframe" content="true">
+  <meta name="html-box-height-mode" content="auto">
+  <title>软链拨针排空与传送履带钢印示例 — lark-tech-storytelling</title>
+  <style>
+    :root {
+      --bg: #FFFFFF;
+      --page-wrap: #F4F5F7;
+      --ink: #111827;
+      --ink-2: #374151;
+      --muted: #6B7280;
+      --faint: #9CA3AF;
+      --hairline: #E5E7EB;
+      --subtle: #F9FAFB;
+
+      --blue: #0F62FE;
+      --blue-soft: #EDF5FF;
+      --purple: #6D28D9;
+      --purple-soft: #F5F3FF;
+      --amber: #B45309;
+      --amber-soft: #FFFBEB;
+      --teal: #0D9488;
+      --teal-soft: #F0FDFA;
+      --green: #059669;
+      --green-soft: #ECFDF5;
+      --red: #DC2626;
+      --red-soft: #FEF2F2;
+
+      --sans: -apple-system, BlinkMacSystemFont, "Inter", "PingFang SC", "Noto Sans SC", "Hiragino Sans GB", sans-serif;
+      --mono: "SF Mono", "JetBrains Mono", Menlo, Monaco, Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--page-wrap);
+      color: var(--ink);
+      font-family: var(--sans);
+      line-height: 1.74;
+      padding: 28px 16px 64px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .lark-page {
+      max-width: 860px;
+      margin: 0 auto;
+      background: var(--bg);
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 14px 34px rgba(15, 23, 42, 0.04);
+      padding: 46px 54px 58px;
+    }
+    @media (max-width: 680px) {
+      .lark-page { padding: 28px 20px 42px; }
+    }
+
+    h1.doc-title {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.3;
+      color: var(--ink);
+      margin-bottom: 16px;
+    }
+
+    .lead-summary {
+      border-left: 3px solid var(--ink);
+      padding: 2px 0 2px 16px;
+      margin-bottom: 30px;
+      color: var(--ink-2);
+      font-size: 15px;
+    }
+    .lead-summary p + p { margin-top: 6px; }
+
+    h2.sec-title {
+      font-size: 19.5px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      color: var(--ink);
+      margin: 36px 0 12px;
+    }
+
+    p.prose {
+      font-size: 15.5px;
+      color: var(--ink-2);
+      margin: 10px 0;
+    }
+    p.prose strong { color: var(--ink); font-weight: 600; }
+    .mark-key {
+      background: #FEF3C7;
+      padding: 1px 5px;
+      border-radius: 3px;
+      color: var(--ink);
+      font-weight: 500;
+    }
+
+    /* =========================================================
+       <html5-block> 组件：Distill 纯白无界图版（无缝嵌入飞书白底）
+       ========================================================= */
+    .distill-fig {
+      margin: 24px 0 30px;
+      padding: 18px 0 14px;
+      border-top: 1px solid var(--hairline);
+      border-bottom: 1px solid var(--hairline);
+      background: #FFFFFF;
+      overflow: hidden;
+    }
+
+    .df-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    .df-heading {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .df-kicker {
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      background: var(--subtle);
+      border: 1px solid var(--hairline);
+      padding: 2px 7px;
+      border-radius: 4px;
+    }
+    .df-title {
+      font-size: 14.5px;
+      font-weight: 600;
+      color: var(--ink);
+    }
+
+    .df-switch {
+      display: inline-flex;
+      background: #F3F4F6;
+      padding: 2px;
+      border-radius: 7px;
+      gap: 2px;
+    }
+    .df-switch button {
+      border: 0;
+      background: transparent;
+      padding: 5px 11px;
+      border-radius: 5px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.16s ease;
+      font-family: var(--sans);
+    }
+    .df-switch button[aria-pressed="true"] {
+      background: #FFFFFF;
+      color: var(--ink);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+    }
+
+    .df-canvas {
+      width: 100%;
+      background: #FFFFFF;
+      overflow: hidden;
+    }
+    .df-canvas.ratio-ptr { aspect-ratio: 800 / 300; }
+    .df-canvas.ratio-conv { aspect-ratio: 800 / 320; }
+    .df-canvas svg {
+      display: block;
+      width: 100%;
+      height: auto;
+      user-select: none;
+    }
+
+    /* Hover 聚光灯：悬停信封或席位时聚焦同编号链路 */
+    .df-canvas svg.hov-pair [data-seq] {
+      opacity: 0.18 !important;
+      transition: opacity 0.16s ease;
+    }
+    .df-canvas svg.hov-pair [data-seq].lit {
+      opacity: 1 !important;
+    }
+
+    /* 精密时间轴与关键帧锚点栏 */
+    .df-timeline {
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .df-scrub-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .df-play, .df-step {
+      height: 28px;
+      border-radius: 6px;
+      border: 1px solid var(--hairline);
+      background: var(--subtle);
+      color: var(--ink);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex: none;
+      font-family: var(--sans);
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 0 9px;
+      transition: all 0.14s ease;
+    }
+    .df-play { width: 30px; padding: 0; }
+    .df-play:hover, .df-step:hover { border-color: var(--muted); background: #fff; }
+    .df-play svg { width: 11px; height: 11px; fill: currentColor; }
+
+    .df-speed {
+      display: inline-flex;
+      background: #F3F4F6;
+      padding: 2px;
+      border-radius: 6px;
+      gap: 2px;
+      flex: none;
+    }
+    .df-speed button {
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 7px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .df-speed button.active {
+      background: #FFFFFF;
+      color: var(--ink);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+    }
+
+    .df-range {
+      flex: 1;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 4px;
+      border-radius: 999px;
+      background: #E5E7EB;
+      outline: none;
+      cursor: pointer;
+    }
+    .df-range::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--ink);
+      border: 2px solid #FFFFFF;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+      cursor: grab;
+    }
+
+    .df-clock {
+      font-family: var(--mono);
+      font-size: 11.5px;
+      color: var(--muted);
+      min-width: 52px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .df-chapters {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .df-chap-btn {
+      border: 1px solid var(--hairline);
+      background: #FFFFFF;
+      color: var(--muted);
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 3px 9px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: var(--sans);
+      white-space: nowrap;
+    }
+    .df-chap-btn:hover { border-color: var(--ink-2); color: var(--ink); }
+    .df-chap-btn.active {
+      background: var(--ink);
+      border-color: var(--ink);
+      color: #FFFFFF;
+    }
+
+    .df-caption {
+      margin-top: 8px;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 22px;
+      height: 44px;
+      overflow: hidden;
+    }
+    .df-caption b { color: var(--ink); font-weight: 600; }
+
+    .grid-compare {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 14px;
+    }
+    @media (max-width: 680px) {
+      .grid-compare { grid-template-columns: 1fr; }
+    }
+    .code-card {
+      background: var(--subtle);
+      border: 1px solid var(--hairline);
+      border-radius: 8px;
+      padding: 14px 16px;
+    }
+    .code-card .cc-head {
+      font-size: 12.5px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .code-card pre {
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.6;
+      color: var(--ink-2);
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <!--
+    参考说明：本文件用于展示「飞书正文 + 内嵌交互图表」的文图呼应与物理母题效果；
+    实际为飞书 <html5-block> 生成单个独立 HTML 图表时，请参考 ../interactive-svg-template.html 只输出纯白无界图表容器，不要外包 .lark-page 模拟页框。
+  -->
+  <article class="lark-page">
+    <h1 class="doc-title">常驻沙箱的平滑热切与长连接防串号设计</h1>
+
+    <div class="lead-summary">
+      <p><b>核心命题</b>：如何让常驻容器在不中断活跃会话的前提下秒级升级，又避免长连接复用因偶发超时陷入“全员串号”？</p>
+      <p>本文用两个物理模型拆解背后的工程契约：<b>指针原子拨动（升级面）</b>与<b>信封钢印配对（传输面）</b>。</p>
+    </div>
+
+    <!-- ==================== 第一节 ==================== -->
+    <h2 class="sec-title">1. 升级面：拨动软链指针，而不是推倒整座容器</h2>
+
+    <p class="prose">
+      把运行时写死在容器镜像里，意味着哪怕只改一行代码，都必须销毁整台实例重拉镜像——活跃长连接瞬间断流。
+    </p>
+    <p class="prose">
+      平滑热切的核心是不动容器底座，只在磁盘上并排准备好新版目录 <code>v1.5</code>，校验通过后执行一次内核级原子的 <code>rename()</code> <span class="mark-key">把 current 指针瞬间拨向新舱，同时让旧舱把存量连接自然排空后再熄火</span>。
+    </p>
+
+    <!-- ==================== 图版 2.1：母题 A — 物理指针拨动与双舱排空 ==================== -->
+    <section class="distill-fig" id="fig-pointer">
+      <div class="df-bar">
+        <div class="df-heading">
+          <span class="df-kicker">Archetype / Pointer &amp; Drain</span>
+          <span class="df-title">原子软链拨针 vs 整机销毁重建</span>
+        </div>
+        <div class="df-switch">
+          <button type="button" id="p1-mode-relay" aria-pressed="true">原子软链热切 (0 断流)</button>
+          <button type="button" id="p1-mode-rebuild" aria-pressed="false">传统容器重建 (断流 38s)</button>
+        </div>
+      </div>
+
+      <div class="df-canvas ratio-ptr">
+        <svg id="svg-pointer" viewBox="0 0 800 300" role="img" aria-label="原子软链指针拨动与旧版本排空物理示意图">
+          <defs>
+            <linearGradient id="pod-grad-blue" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#EDF5FF"/>
+              <stop offset="100%" stop-color="#FFFFFF"/>
+            </linearGradient>
+            <linearGradient id="pod-grad-green" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#ECFDF5"/>
+              <stop offset="100%" stop-color="#FFFFFF"/>
+            </linearGradient>
+          </defs>
+
+          <!-- 左侧实时会话入口管道 -->
+          <text x="24" y="122" font-size="12" font-weight="600" fill="#111827">持续会话流量</text>
+          <text x="24" y="140" font-size="11" fill="#6B7280">WebSocket / RPC</text>
+          <path d="M 24 156 L 236 156" stroke="#E5E7EB" stroke-width="10" stroke-linecap="round"/>
+          <path d="M 24 156 L 236 156" stroke="#9CA3AF" stroke-width="1.5" stroke-dasharray="4 4"/>
+
+          <!-- 中央 Symlink 物理枢轴与旋转指针臂 -->
+          <circle cx="250" cy="156" r="34" fill="#F9FAFB" stroke="#E5E7EB" stroke-width="1.2"/>
+          <text x="250" y="106" text-anchor="middle" font-family="var(--mono)" font-size="11" font-weight="600" fill="#374151">current 软链枢轴</text>
+
+          <!-- 上下两条分流导轨 -->
+          <path id="p1-rail-top" d="M 332 110 C 378 82, 410 78, 456 78" fill="none" stroke="#0F62FE" stroke-width="2.2"/>
+          <path id="p1-rail-bot" d="M 332 202 C 378 230, 410 234, 456 234" fill="none" stroke="#E5E7EB" stroke-width="2.2"/>
+
+          <!-- 旋转指针臂 -->
+          <g id="p1-needle" transform="translate(250 156) rotate(-28)">
+            <line x1="0" y1="0" x2="90" y2="0" stroke="#111827" stroke-width="5" stroke-linecap="round"/>
+            <polygon points="96,0 82,-6 82,6" fill="#111827"/>
+            <circle cx="0" cy="0" r="8" fill="#111827"/>
+            <circle cx="0" cy="0" r="3.5" fill="#FFFFFF"/>
+          </g>
+
+          <!-- 右上舱：versions/v1.4.2 -->
+          <g id="p1-pod-v1" transform="translate(462 28)">
+            <rect id="p1-v1-box" x="0" y="0" width="314" height="104" rx="10" fill="url(#pod-grad-blue)" stroke="#0F62FE" stroke-width="1.6"/>
+            <text x="16" y="26" font-family="var(--mono)" font-size="12.5" font-weight="700" fill="#111827">versions/v1.4.2</text>
+            <rect id="p1-v1-badge" x="206" y="11" width="92" height="20" rx="10" fill="#EDF5FF"/>
+            <text id="p1-v1-badge-txt" x="252" y="21.5" text-anchor="middle" dominant-baseline="central" font-size="10.5" font-weight="600" fill="#0F62FE">主力承载中</text>
+
+            <text x="16" y="54" font-size="11.5" fill="#4B5563" id="p1-v1-desc">存量活跃连接平滑执行</text>
+            <!-- 排空水位进度槽 -->
+            <rect x="16" y="68" width="282" height="10" rx="5" fill="#E5E7EB"/>
+            <rect id="p1-v1-bar" x="16" y="68" width="210" height="10" rx="5" fill="#0F62FE"/>
+            <text id="p1-v1-meter" x="298" y="92" text-anchor="end" font-family="var(--mono)" font-size="10" fill="#6B7280">活跃连接: 6</text>
+          </g>
+
+          <!-- 右下舱：versions/v1.5.0 -->
+          <g id="p1-pod-v2" transform="translate(462 178)">
+            <rect id="p1-v2-box" x="0" y="0" width="314" height="104" rx="10" fill="#F9FAFB" stroke="#D1D5DB" stroke-width="1.4" stroke-dasharray="5 4"/>
+            <text x="16" y="26" font-family="var(--mono)" font-size="12.5" font-weight="700" fill="#111827" id="p1-v2-name">versions/v1.5.0</text>
+            <rect id="p1-v2-badge" x="196" y="11" width="102" height="20" rx="10" fill="#F3F4F6"/>
+            <text id="p1-v2-badge-txt" x="247" y="21.5" text-anchor="middle" dominant-baseline="central" font-size="10.5" font-weight="600" fill="#6B7280">待拉包落盘</text>
+
+            <text x="16" y="54" font-size="11.5" fill="#4B5563" id="p1-v2-desc">后台独立解压，不影响线上流量</text>
+            <rect x="16" y="68" width="282" height="10" rx="5" fill="#E5E7EB"/>
+            <rect id="p1-v2-bar" x="16" y="68" width="0" height="10" rx="5" fill="#059669"/>
+            <text id="p1-v2-meter" x="298" y="92" text-anchor="end" font-family="var(--mono)" font-size="10" fill="#6B7280">校验进度: 0%</text>
+          </g>
+
+          <!-- 断流拦截屏障（仅传统容器重建模式出现） -->
+          <g id="p1-outage-wall" style="opacity:0">
+            <line x1="212" y1="120" x2="212" y2="192" stroke="#DC2626" stroke-width="3.5" stroke-linecap="round"/>
+            <rect x="122" y="198" width="178" height="24" rx="5" fill="#FEF2F2" stroke="#FCA5A5"/>
+            <text x="211" y="210" text-anchor="middle" dominant-baseline="central" font-size="11" font-weight="600" fill="#DC2626">502 断连窗口 / 容器销毁重建中</text>
+          </g>
+
+          <!-- 动态会话粒子层 -->
+          <g id="p1-particles"></g>
+        </svg>
+      </div>
+
+      <div class="df-timeline">
+        <div class="df-scrub-row">
+          <button type="button" class="df-step" id="p1-prev" title="跳至上一阶段">◀ 上一步</button>
+          <button type="button" class="df-play" id="p1-play" aria-label="播放暂停">
+            <svg viewBox="0 0 16 16" id="p1-play-ic"><path d="M4 2.5v11l9-5.5z"/></svg>
+          </button>
+          <button type="button" class="df-step" id="p1-next" title="跳至下一阶段">下一步 ▶</button>
+          <input type="range" class="df-range" id="p1-range" min="0" max="1000" value="0">
+          <span class="df-clock" id="p1-clock">0.0s</span>
+          <div class="df-speed" id="p1-speed" aria-label="播放倍速">
+            <button type="button" data-sp="0.5">0.5×</button>
+            <button type="button" data-sp="1" class="active">1.0×</button>
+            <button type="button" data-sp="1.5">1.5×</button>
+          </div>
+        </div>
+        <div class="df-chapters" id="p1-chaps">
+          <button type="button" class="df-chap-btn active" data-t="0.08">① 后台静默落盘</button>
+          <button type="button" class="df-chap-btn" data-t="0.36">② rename() 原子拨针</button>
+          <button type="button" class="df-chap-btn" data-t="0.62">③ 新旧双舱并行排空</button>
+          <button type="button" class="df-chap-btn" data-t="0.88">④ 旧舱归零优雅回收</button>
+        </div>
+      </div>
+
+      <p class="df-caption" id="p1-caption">
+        <b>阶段 ① 静默落盘：</b>v1.4.2 正常承接全部会话，v1.5.0 在旁路目录独立下载校验，零锁竞争。
+      </p>
+    </section>
+
+    <!-- ==================== 第二节 ==================== -->
+    <h2 class="sec-title">2. 传输面：当信封没有编号，一次超时就会让整条履带错位</h2>
+
+    <p class="prose">
+      长连接保住了，但为什么线上偶发一次 200ms 抖动，后续几十个请求全都拿到了驴唇不对马嘴的结果？
+    </p>
+    <p class="prose">
+      看下方这条真实的传送履带：当 <strong>#1 蓝席位</strong> 因超时提前撤离窗口，排在后面的 <strong>#2 紫席位</strong> 自动补位到窗口正上方；然而管道里滑出来的第一封信仍然是 <strong>#1 的蓝色迟到回执</strong>——<span class="mark-key">没有钢印校验时，紫色席位直接拆开了蓝色信封，此后每一拍全部错位一格</span>。
+    </p>
+
+    <!-- ==================== 图版 2.2：母题 B — 传送履带与信封钢印闸门 ==================== -->
+    <section class="distill-fig" id="fig-conveyor">
+      <div class="df-bar">
+        <div class="df-heading">
+          <span class="df-kicker">Archetype / Conveyor &amp; Seal</span>
+          <span class="df-title">领号窗口移位与回执信封配对履带（悬停任一席位/信封可高亮配对）</span>
+        </div>
+        <div class="df-switch">
+          <button type="button" id="p2-mode-fifo" aria-pressed="true">裸流按序领包 (连环串号)</button>
+          <button type="button" id="p2-mode-seal" aria-pressed="false">信封钢印闸门 (丢弃孤儿帧)</button>
+        </div>
+      </div>
+
+      <div class="df-canvas ratio-conv">
+        <svg id="svg-conveyor" viewBox="0 0 800 320" role="img" aria-label="等待席位左移与管道回执信封错位配对动画">
+          <!-- 顶部：调用方等待队列轨 -->
+          <text x="20" y="18" font-size="11.5" font-weight="600" fill="#374151">上游调用等待席位</text>
+          <text x="212" y="18" text-anchor="middle" font-family="var(--mono)" font-size="10.5" font-weight="600" fill="#111827">▼ 队首认领窗口</text>
+          <rect x="148" y="25" width="128" height="66" rx="8" fill="#F9FAFB" stroke="#111827" stroke-width="1.4" stroke-dasharray="4 3"/>
+
+          <!-- 中部：校验闸门与废件回收滑道 -->
+          <g id="p2-gate-group">
+            <rect id="p2-gate-pill" x="154" y="144" width="116" height="24" rx="12" fill="#FFFBEB" stroke="#F59E0B"/>
+            <text id="p2-gate-txt" x="212" y="156.5" text-anchor="middle" dominant-baseline="central" font-size="10.5" font-weight="600" fill="#B45309">无校验 / 见包即领</text>
+          </g>
+
+          <!-- 右下侧废件回收盒（信封钢印模式启用） -->
+          <g id="p2-trash-bin" style="opacity:0.28">
+            <path d="M 212 162 C 212 250, 96 252, 82 276" fill="none" stroke="#DC2626" stroke-width="1.4" stroke-dasharray="3 3"/>
+            <rect x="20" y="264" width="118" height="36" rx="6" fill="#FEF2F2" stroke="#FCA5A5"/>
+            <text x="79" y="282" text-anchor="middle" dominant-baseline="central" font-size="11" font-weight="600" fill="#DC2626" id="p2-trash-txt">孤儿帧丢弃槽 (0)</text>
+          </g>
+
+          <!-- 底部：FIFO 回执传送履带 -->
+          <rect x="148" y="206" width="628" height="16" rx="8" fill="#F3F4F6" stroke="#D1D5DB"/>
+          <g id="p2-belt-ticks"></g>
+          <text x="774" y="238" text-anchor="end" font-size="11" fill="#6B7280">◀ 沙箱执行完毕，回执信封沿长连接向左滑出</text>
+
+          <!-- 动态席位卡片与信封层 -->
+          <g id="p2-callers"></g>
+          <g id="p2-envelopes"></g>
+          <g id="p2-pair-badges"></g>
+        </svg>
+      </div>
+
+      <div class="df-timeline">
+        <div class="df-scrub-row">
+          <button type="button" class="df-step" id="p2-prev" title="跳至上一阶段">◀ 上一步</button>
+          <button type="button" class="df-play" id="p2-play" aria-label="播放暂停">
+            <svg viewBox="0 0 16 16" id="p2-play-ic"><path d="M4 2.5v11l9-5.5z"/></svg>
+          </button>
+          <button type="button" class="df-step" id="p2-next" title="跳至下一阶段">下一步 ▶</button>
+          <input type="range" class="df-range" id="p2-range" min="0" max="1000" value="0">
+          <span class="df-clock" id="p2-clock">0.0s</span>
+          <div class="df-speed" id="p2-speed" aria-label="播放倍速">
+            <button type="button" data-sp="0.5">0.5×</button>
+            <button type="button" data-sp="1" class="active">1.0×</button>
+            <button type="button" data-sp="1.5">1.5×</button>
+          </div>
+        </div>
+        <div class="df-chapters" id="p2-chaps">
+          <button type="button" class="df-chap-btn active" data-t="0.06">① #1 排头等待</button>
+          <button type="button" class="df-chap-btn" data-t="0.28">② #1 超时撤离/队列左移</button>
+          <button type="button" class="df-chap-btn" data-t="0.52">③ 迟到蓝信封抵达窗口</button>
+          <button type="button" class="df-chap-btn" data-t="0.86">④ 最终配对结果</button>
+        </div>
+      </div>
+
+      <p class="df-caption" id="p2-caption">
+        <b>阶段 ① 排队等待：</b>蓝 #1、紫 #2、琥珀 #3、青 #4 依次排在认领窗口，等待各自同色的回执信封。
+      </p>
+    </section>
+
+    <!-- ==================== 第三节：精简核心代码对照 ==================== -->
+    <h2 class="sec-title">3. 协议收口：两行校验切断错位传播链</h2>
+
+    <div class="grid-compare">
+      <div class="code-card">
+        <div class="cc-head">
+          <span style="color:var(--red)">❌ 脆弱实现：按 FIFO 队首盲领</span>
+          <span style="font-family:var(--mono);font-size:11px;color:var(--muted)">implicit_fifo.ts</span>
+        </div>
+        <pre><code>socket.on("frame", (payload) => {
+  // 【隐患】一旦前序请求超时提前 shift，
+  // 队首 waiter 永远错拿到前一个人的旧包
+  const waiter = pendingQueue.shift();
+  waiter?.resolve(payload);
+});</code></pre>
+      </div>
+      <div class="code-card">
+        <div class="cc-head">
+          <span style="color:var(--green)">✓ 收敛实现：按 req_id 寻址 + 孤儿帧自净</span>
+          <span style="font-family:var(--mono);font-size:11px;color:var(--muted)">mux_channel.ts</span>
+        </div>
+        <pre><code>socket.on("frame", ({ reqId, payload }) => {
+  const waiter = inflightMap.get(reqId);
+  // 【自愈】超时已移除的迟到帧直接丢弃，零串号
+  if (!waiter) return metrics.inc("stale_drop");
+  inflightMap.delete(reqId);
+  waiter.resolve(payload);
+});</code></pre>
+      </div>
+    </div>
+  </article>
+
+  <script>
+    (() => {
+      const NS = "http://www.w3.org/2000/svg";
+      const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+      const smooth = u => { const x = clamp(u, 0, 1); return x * x * (3 - 2 * x); };
+      const lerp = (a, b, u) => a + (b - a) * u;
+      const f1 = n => n.toFixed(1);
+
+      function el(tag, attrs = {}, parent = null) {
+        const node = document.createElementNS(NS, tag);
+        for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+        if (parent) parent.appendChild(node);
+        return node;
+      }
+
+      function setIcon(ic, on) {
+        ic.innerHTML = on
+          ? '<path d="M3.5 2.5h3v11h-3zm6 0h3v11h-3z"/>'
+          : '<path d="M4 2.5v11l9-5.5z"/>';
+      }
+
+      /* =========================================================================
+         ARCHETYPE 1: Pointer Switch & Connection Drain
+         u in [0, 1] (duration ~7.2s)
+         ========================================================================= */
+      (function initPointerArchetype() {
+        const needle = document.getElementById("p1-needle");
+        const railTop = document.getElementById("p1-rail-top");
+        const railBot = document.getElementById("p1-rail-bot");
+        const v1Box = document.getElementById("p1-v1-box");
+        const v1Badge = document.getElementById("p1-v1-badge");
+        const v1BadgeTxt = document.getElementById("p1-v1-badge-txt");
+        const v1Desc = document.getElementById("p1-v1-desc");
+        const v1Bar = document.getElementById("p1-v1-bar");
+        const v1Meter = document.getElementById("p1-v1-meter");
+
+        const v2Box = document.getElementById("p1-v2-box");
+        const v2Badge = document.getElementById("p1-v2-badge");
+        const v2BadgeTxt = document.getElementById("p1-v2-badge-txt");
+        const v2Desc = document.getElementById("p1-v2-desc");
+        const v2Bar = document.getElementById("p1-v2-bar");
+        const v2Meter = document.getElementById("p1-v2-meter");
+        const outageWall = document.getElementById("p1-outage-wall");
+        const gParticles = document.getElementById("p1-particles");
+
+        const particles = Array.from({ length: 8 }, (_, i) =>
+          el("circle", { r: "4.2", fill: "#0F62FE", "data-idx": i }, gParticles)
+        );
+
+        let rebuildMode = false;
+        let u = 0;
+        let playing = true;
+        let speedMul = 1.0;
+        const CHAP_STOPS = [0.08, 0.36, 0.62, 0.88];
+
+        const prevBtn = document.getElementById("p1-prev");
+        const nextBtn = document.getElementById("p1-next");
+        const speedBtns = [...document.querySelectorAll("#p1-speed button")];
+        const playBtn = document.getElementById("p1-play");
+        const playIc = document.getElementById("p1-play-ic");
+        const range = document.getElementById("p1-range");
+        const clock = document.getElementById("p1-clock");
+        const cap = document.getElementById("p1-caption");
+        const chapBtns = [...document.querySelectorAll("#p1-chaps .df-chap-btn")];
+        const btnRelay = document.getElementById("p1-mode-relay");
+        const btnRebuild = document.getElementById("p1-mode-rebuild");
+
+        function updateChapLabels() {
+          const texts = rebuildMode
+            ? ["① 收到升级指令", "② 销毁旧容器 (断连)", "③ 拉取数 GB 全量镜像", "④ 冷启动恢复服务"]
+            : ["① 后台静默落盘", "② rename() 原子拨针", "③ 新旧双舱并行排空", "④ 旧舱归零优雅回收"];
+          chapBtns.forEach((b, idx) => (b.textContent = texts[idx]));
+        }
+
+        function render(prog) {
+          // Highlight active chapter button
+          const activeIdx = prog < 0.32 ? 0 : prog < 0.52 ? 1 : prog < 0.8 ? 2 : 3;
+          chapBtns.forEach((b, idx) => b.classList.toggle("active", idx === activeIdx));
+
+          if (!rebuildMode) {
+            outageWall.style.opacity = "0";
+            clock.textContent = `${(prog * 3.2).toFixed(1)}s`;
+
+            // Needle angle: -28 deg (top pod) -> +28 deg (bottom pod) snappy atomic flip at u = 0.34..0.40
+            const flip = smooth((prog - 0.34) / 0.07);
+            const ang = lerp(-28, 28, flip);
+            needle.setAttribute("transform", `translate(250 156) rotate(${f1(ang)})`);
+
+            railTop.setAttribute("stroke", flip > 0.5 ? "#D1D5DB" : "#0F62FE");
+            railBot.setAttribute("stroke", flip > 0.5 ? "#059669" : "#E5E7EB");
+
+            // Pod v1 (draining after flip)
+            const drain = smooth((prog - 0.38) / 0.44);
+            const v1Conn = Math.round(6 * (1 - drain));
+            v1Bar.setAttribute("width", f1(240 * (1 - drain)));
+            v1Meter.textContent = `活跃连接: ${v1Conn}`;
+            if (flip < 0.5) {
+              v1Box.setAttribute("stroke", "#0F62FE");
+              v1Box.style.opacity = "1";
+              v1Badge.setAttribute("fill", "#EDF5FF");
+              v1BadgeTxt.setAttribute("fill", "#0F62FE");
+              v1BadgeTxt.textContent = "主力承载中";
+              v1Desc.textContent = "承接全部进入的活跃长连接";
+            } else if (drain < 0.98) {
+              v1Box.setAttribute("stroke", "#F59E0B");
+              v1Box.style.opacity = "0.95";
+              v1Badge.setAttribute("fill", "#FFFBEB");
+              v1BadgeTxt.setAttribute("fill", "#B45309");
+              v1BadgeTxt.textContent = "优雅排空中";
+              v1Desc.textContent = "不再进新流，等待存量任务自然跑完";
+            } else {
+              v1Box.setAttribute("stroke", "#E5E7EB");
+              v1Box.style.opacity = "0.52";
+              v1Badge.setAttribute("fill", "#F3F4F6");
+              v1BadgeTxt.setAttribute("fill", "#6B7280");
+              v1BadgeTxt.textContent = "已回收退出";
+              v1Desc.textContent = "存量归零，干净释放端口与进程组";
+            }
+
+            // Pod v2 (staging 0..0.34 -> live 0.35..1.0)
+            const stageP = clamp(prog / 0.32, 0, 1);
+            if (flip < 0.5) {
+              v2Box.setAttribute("stroke", stageP >= 1 ? "#059669" : "#D1D5DB");
+              v2Box.setAttribute("stroke-dasharray", stageP >= 1 ? "none" : "5 4");
+              v2Box.setAttribute("fill", stageP >= 1 ? "url(#pod-grad-green)" : "#F9FAFB");
+              v2Badge.setAttribute("fill", stageP >= 1 ? "#ECFDF5" : "#F3F4F6");
+              v2BadgeTxt.setAttribute("fill", stageP >= 1 ? "#059669" : "#6B7280");
+              v2BadgeTxt.textContent = stageP >= 1 ? "SHA-256 就绪" : "拉包解压中";
+              v2Desc.textContent = "旁路静默解压校验，不抢占线上资源";
+              v2Bar.setAttribute("width", f1(282 * stageP));
+              v2Meter.textContent = `预热进度: ${Math.round(stageP * 100)}%`;
+            } else {
+              v2Box.setAttribute("stroke", "#059669");
+              v2Box.removeAttribute("stroke-dasharray");
+              v2Box.setAttribute("fill", "url(#pod-grad-green)");
+              v2Badge.setAttribute("fill", "#ECFDF5");
+              v2BadgeTxt.setAttribute("fill", "#059669");
+              v2BadgeTxt.textContent = "新版主力在线";
+              v2Desc.textContent = "新连接无缝驶入新版运行时，0 报错";
+              const newLoad = Math.min(6, Math.round(2 + 4 * smooth((prog - 0.38) / 0.3)));
+              v2Bar.setAttribute("width", f1(42 * newLoad));
+              v2Meter.textContent = `活跃连接: ${newLoad}`;
+            }
+
+            // Flowing session particles: never blocked!
+            particles.forEach((c, i) => {
+              const ph = (prog * 3.4 + i / 8) % 1;
+              let x, y, col;
+              if (ph < 0.45) {
+                const k = ph / 0.45;
+                x = lerp(30, 250, k);
+                y = 156;
+                col = flip > 0.5 ? "#059669" : "#0F62FE";
+              } else {
+                const k = (ph - 0.45) / 0.55;
+                const goBot = flip > 0.5;
+                x = lerp(250, 462, k);
+                const targetY = goBot ? 234 : 78;
+                y = lerp(156, targetY, smooth(k));
+                col = goBot ? "#059669" : "#0F62FE";
+              }
+              c.setAttribute("cx", f1(x));
+              c.setAttribute("cy", f1(y));
+              c.setAttribute("fill", col);
+              c.style.opacity = "1";
+            });
+
+            if (activeIdx === 0) cap.innerHTML = "<b>阶段 ① 静默落盘：</b>v1.4.2 承载线上流量，v1.5.0 在独立版本目录完成解压与 SHA-256 校验。";
+            else if (activeIdx === 1) cap.innerHTML = "<b>阶段 ② 原子拨针：</b>内核级 <code>rename()</code> 在亚毫秒内将 <code>current</code> 指针拨向 v1.5.0，流量无感切流。";
+            else if (activeIdx === 2) cap.innerHTML = "<b>阶段 ③ 并行排空：</b>新会话全部进入 v1.5.0，v1.4.2 保持只出不进，护送存量长连接跑完最后一程。";
+            else cap.innerHTML = "<b>阶段 ④ 优雅回收：</b>旧舱活跃连接自然归零后干净退出，全程实现 <b>0ms 服务中断</b>。";
+          } else {
+            // Traditional container rebuild mode (45s outage!)
+            clock.textContent = `${(prog * 45).toFixed(0)}s`;
+            const inOutage = prog >= 0.2 && prog < 0.82;
+            outageWall.style.opacity = inOutage ? "1" : "0";
+            needle.setAttribute("transform", `translate(250 156) rotate(${prog < 0.82 ? -28 : 28})`);
+            railTop.setAttribute("stroke", prog < 0.2 ? "#0F62FE" : "#E5E7EB");
+            railBot.setAttribute("stroke", prog >= 0.82 ? "#059669" : "#E5E7EB");
+
+            if (prog < 0.2) {
+              v1Box.style.opacity = "1"; v1Box.setAttribute("stroke", "#0F62FE");
+              v1BadgeTxt.textContent = "旧容器运行中"; v1Desc.textContent = "代码与基础镜像死绑在同一生命周期";
+              v1Bar.setAttribute("width", "220"); v1Meter.textContent = "活跃连接: 6";
+            } else {
+              v1Box.style.opacity = "0.35"; v1Box.setAttribute("stroke", "#DC2626");
+              v1Badge.setAttribute("fill", "#FEF2F2"); v1BadgeTxt.setAttribute("fill", "#DC2626");
+              v1BadgeTxt.textContent = "SIGTERM 强制销毁"; v1Desc.textContent = "整机销毁，6 条在途长连接被强制掐断！";
+              v1Bar.setAttribute("width", "0"); v1Meter.textContent = "连接全部断开";
+            }
+
+            const bootP = clamp((prog - 0.22) / 0.58, 0, 1);
+            if (prog < 0.82) {
+              v2Box.setAttribute("fill", "#FEF2F2"); v2Box.setAttribute("stroke", "#DC2626");
+              v2Box.setAttribute("stroke-dasharray", "5 4");
+              v2Badge.setAttribute("fill", "#FEF2F2"); v2BadgeTxt.setAttribute("fill", "#DC2626");
+              v2BadgeTxt.textContent = "重拉 GB 级全量镜像";
+              v2Desc.textContent = "漫长冷启动窗口期，外部请求持续报错 502";
+              v2Bar.setAttribute("width", f1(282 * bootP));
+              v2Meter.textContent = `冷启动进度: ${Math.round(bootP * 100)}%`;
+            } else {
+              v2Box.setAttribute("fill", "url(#pod-grad-green)"); v2Box.setAttribute("stroke", "#059669");
+              v2Box.removeAttribute("stroke-dasharray");
+              v2Badge.setAttribute("fill", "#ECFDF5"); v2BadgeTxt.setAttribute("fill", "#059669");
+              v2BadgeTxt.textContent = "冷启动终于完成";
+              v2Desc.textContent = "历经 38 秒断流窗口后才重新恢复可用";
+              v2Bar.setAttribute("width", "180"); v2Meter.textContent = "重新建连中";
+            }
+
+            particles.forEach((c, i) => {
+              const ph = (prog * 3.4 + i / 8) % 1;
+              if (inOutage) {
+                // Bounce/crash against red wall at x=206!
+                const k = ph;
+                if (k < 0.65) {
+                  c.setAttribute("cx", f1(lerp(30, 204, k / 0.65)));
+                  c.setAttribute("cy", "156");
+                  c.setAttribute("fill", "#DC2626");
+                  c.style.opacity = "1";
+                } else {
+                  const b = (k - 0.65) / 0.35;
+                  c.setAttribute("cx", f1(204 - 28 * b));
+                  c.setAttribute("cy", f1(156 + (i % 2 ? 1 : -1) * 26 * b));
+                  c.setAttribute("fill", "#DC2626");
+                  c.style.opacity = (1 - b).toFixed(3);
+                }
+              } else {
+                const goBot = prog >= 0.82;
+                const x = ph < 0.45 ? lerp(30, 250, ph / 0.45) : lerp(250, 462, (ph - 0.45) / 0.55);
+                const y = ph < 0.45 ? 156 : lerp(156, goBot ? 234 : 78, smooth((ph - 0.45) / 0.55));
+                c.setAttribute("cx", f1(x)); c.setAttribute("cy", f1(y));
+                c.setAttribute("fill", goBot ? "#059669" : "#0F62FE");
+                c.style.opacity = "1";
+              }
+            });
+
+            if (activeIdx === 0) cap.innerHTML = "<b>传统模式 ①：</b>任何小版本修复都需要下发整机容器销毁重建指令。";
+            else if (activeIdx === 1) cap.innerHTML = "<b>传统模式 ② 强制断流：</b>旧容器销毁瞬间掐断所有本地内存上下文与长连接。";
+            else if (activeIdx === 2) cap.innerHTML = "<b>传统模式 ③ 漫长冷启动：</b>重拉数 GB 镜像并挂载磁盘，外部请求撞上 502 断连墙。";
+            else cap.innerHTML = "<b>传统模式 ④ 延迟恢复：</b>整整近 40 秒空窗期后服务才重新上线。";
+          }
+        }
+
+        playBtn.addEventListener("click", () => { playing = !playing; setIcon(playIc, playing); });
+        range.addEventListener("input", () => {
+          playing = false; setIcon(playIc, false);
+          u = Number(range.value) / 1000;
+          render(u);
+        });
+        chapBtns.forEach(btn => {
+          btn.addEventListener("click", () => {
+            playing = false; setIcon(playIc, false);
+            u = Number(btn.dataset.t);
+            range.value = String(Math.round(u * 1000));
+            render(u);
+          });
+        });
+        btnRelay.addEventListener("click", () => {
+          rebuildMode = false; u = 0; playing = true; setIcon(playIc, true);
+          btnRelay.setAttribute("aria-pressed", "true");
+          btnRebuild.setAttribute("aria-pressed", "false");
+          updateChapLabels(); render(u);
+        });
+        btnRebuild.addEventListener("click", () => {
+          rebuildMode = true; u = 0; playing = true; setIcon(playIc, true);
+          btnRelay.setAttribute("aria-pressed", "false");
+          btnRebuild.setAttribute("aria-pressed", "true");
+          updateChapLabels(); render(u);
+        });
+
+        function getChapIdx(prog) {
+          return prog < 0.32 ? 0 : prog < 0.52 ? 1 : prog < 0.8 ? 2 : 3;
+        }
+        prevBtn.addEventListener("click", () => {
+          playing = false; setIcon(playIc, false);
+          const idx = (getChapIdx(u) + 3) % 4;
+          u = CHAP_STOPS[idx];
+          range.value = String(Math.round(u * 1000));
+          render(u);
+        });
+        nextBtn.addEventListener("click", () => {
+          playing = false; setIcon(playIc, false);
+          const idx = (getChapIdx(u) + 1) % 4;
+          u = CHAP_STOPS[idx];
+          range.value = String(Math.round(u * 1000));
+          render(u);
+        });
+        speedBtns.forEach(sb => {
+          sb.addEventListener("click", () => {
+            speedMul = Number(sb.dataset.sp);
+            speedBtns.forEach(b => b.classList.toggle("active", b === sb));
+          });
+        });
+
+        let prev = performance.now();
+        function loop(now) {
+          const dt = Math.min(0.05, (now - prev) / 1000);
+          prev = now;
+          if (playing) {
+            u = (u + dt * 0.055 * speedMul) % 1;
+            range.value = String(Math.round(u * 1000));
+            render(u);
+          }
+          requestAnimationFrame(loop);
+        }
+        setIcon(playIc, true);
+        render(0);
+        requestAnimationFrame(loop);
+      })();
+
+      /* =========================================================================
+         ARCHETYPE 2: Conveyor Belt & Envelope Seal Pairing
+         ========================================================================= */
+      (function initConveyorArchetype() {
+        const svg = document.getElementById("svg-conveyor");
+        const gTicks = document.getElementById("p2-belt-ticks");
+        const gCallers = document.getElementById("p2-callers");
+        const gEnvs = document.getElementById("p2-envelopes");
+        const gBadges = document.getElementById("p2-pair-badges");
+        const gatePill = document.getElementById("p2-gate-pill");
+        const gateTxt = document.getElementById("p2-gate-txt");
+        const trashBin = document.getElementById("p2-trash-bin");
+        const trashTxt = document.getElementById("p2-trash-txt");
+
+        const ITEMS = [
+          { seq: 1, name: "#1 蓝请求", color: "#0F62FE", soft: "#EDF5FF" },
+          { seq: 2, name: "#2 紫请求", color: "#6D28D9", soft: "#F5F3FF" },
+          { seq: 3, name: "#3 琥珀请求", color: "#B45309", soft: "#FFFBEB" },
+          { seq: 4, name: "#4 青绿请求", color: "#0D9488", soft: "#F0FDFA" }
+        ];
+        const SLOT_X = [212, 366, 520, 674];
+
+        // Belt ticks
+        const beltTicks = Array.from({ length: 16 }, () =>
+          el("line", { y1: "209", y2: "219", stroke: "#9CA3AF", "stroke-width": "1.5", "stroke-linecap": "round" }, gTicks)
+        );
+
+        // Caller Seat Cards
+        const callers = ITEMS.map((it, idx) => {
+          const g = el("g", { "data-seq": String(it.seq), style: "cursor:pointer" }, gCallers);
+          const rect = el("rect", { x: -54, y: -24, width: 108, height: 48, rx: 8, fill: it.soft, stroke: it.color, "stroke-width": "1.6" }, g);
+          const title = el("text", { x: 0, y: -6, "text-anchor": "middle", "dominant-baseline": "central", "font-size": "12", "font-weight": "700", fill: it.color }, g);
+          title.textContent = it.name;
+          const status = el("text", { x: 0, y: 11, "text-anchor": "middle", "dominant-baseline": "central", "font-size": "10", fill: "#4B5563" }, g);
+          status.textContent = "排队领包中";
+          return { ...it, idx, g, rect, status };
+        });
+
+        // Envelope SVGs (actual physical envelope geometry with flap + seal!)
+        const envs = ITEMS.map((it, idx) => {
+          const g = el("g", { "data-seq": String(it.seq), style: "cursor:pointer" }, gEnvs);
+          // Envelope body
+          el("rect", { x: -42, y: -18, width: 84, height: 36, rx: 5, fill: "#FFFFFF", stroke: it.color, "stroke-width": "1.6" }, g);
+          // Envelope V-flap
+          el("path", { d: "M -41 -17 L 0 2 L 41 -17", fill: it.soft, stroke: it.color, "stroke-width": "1.2", "stroke-linejoin": "round" }, g);
+          // Color wax seal dot
+          el("circle", { cx: "0", cy: "2", r: "6.5", fill: it.color }, g);
+          const sealNum = el("text", { x: 0, y: 2.5, "text-anchor": "middle", "dominant-baseline": "central", "font-size": "8.5", "font-weight": "700", fill: "#FFFFFF" }, g);
+          sealNum.textContent = String(it.seq);
+
+          // Optional steel stamp tag on top-right
+          const stamp = el("g", { class: "env-stamp", style: "opacity:0" }, g);
+          el("rect", { x: 14, y: -25, width: 32, height: 13, rx: 3, fill: "#111827" }, stamp);
+          const stTxt = el("text", { x: 30, y: -18.5, "text-anchor": "middle", "dominant-baseline": "central", "font-family": "var(--mono)", "font-size": "8.5", "font-weight": "700", fill: "#FFFFFF" }, stamp);
+          stTxt.textContent = `ID:${it.seq}`;
+
+          return { ...it, idx, g, stamp };
+        });
+
+        // Result pairing pills above seats 2, 3, 4
+        const badges = [1, 2, 3].map(idx => {
+          const g = el("g", { style: "opacity:0" }, gBadges);
+          const r = el("rect", { x: -56, y: -11, width: 112, height: 22, rx: 11, fill: "#FEF2F2", stroke: "#DC2626" }, g);
+          const t = el("text", { x: 0, y: 0.5, "text-anchor": "middle", "dominant-baseline": "central", "font-size": "10.5", "font-weight": "700", fill: "#DC2626" }, g);
+          return { idx, g, r, t };
+        });
+
+        // Hover spotlight matching seq!
+        svg.addEventListener("pointermove", e => {
+          const hit = e.target.closest && e.target.closest("[data-seq]");
+          const seq = hit ? hit.getAttribute("data-seq") : null;
+          svg.classList.toggle("hov-pair", !!seq);
+          svg.querySelectorAll("[data-seq]").forEach(node => {
+            node.classList.toggle("lit", node.getAttribute("data-seq") === seq);
+          });
+        });
+        svg.addEventListener("pointerleave", () => {
+          svg.classList.remove("hov-pair");
+          svg.querySelectorAll("[data-seq].lit").forEach(n => n.classList.remove("lit"));
+        });
+
+        let sealMode = false;
+        let u = 0;
+        let playing = true;
+        let speedMul = 1.0;
+        const CHAP_STOPS = [0.06, 0.28, 0.52, 0.86];
+
+        const prevBtn = document.getElementById("p2-prev");
+        const nextBtn = document.getElementById("p2-next");
+        const speedBtns = [...document.querySelectorAll("#p2-speed button")];
+        const playBtn = document.getElementById("p2-play");
+        const playIc = document.getElementById("p2-play-ic");
+        const range = document.getElementById("p2-range");
+        const clock = document.getElementById("p2-clock");
+        const cap = document.getElementById("p2-caption");
+        const chapBtns = [...document.querySelectorAll("#p2-chaps .df-chap-btn")];
+        const btnFifo = document.getElementById("p2-mode-fifo");
+        const btnSeal = document.getElementById("p2-mode-seal");
+
+        function render(prog) {
+          clock.textContent = `${(prog * 6.0).toFixed(1)}s`;
+          const activeIdx = prog < 0.22 ? 0 : prog < 0.45 ? 1 : prog < 0.76 ? 2 : 3;
+          chapBtns.forEach((b, i) => b.classList.toggle("active", i === activeIdx));
+
+          // Belt ticks scrolling left
+          beltTicks.forEach((ln, i) => {
+            const x = 158 + (((i * 38 - prog * 360) % 608 + 608) % 608);
+            ln.setAttribute("x1", f1(x));
+            ln.setAttribute("x2", f1(x));
+          });
+
+          // Gate & Trash UI
+          if (sealMode) {
+            gatePill.setAttribute("fill", "#ECFDF5");
+            gatePill.setAttribute("stroke", "#059669");
+            gateTxt.setAttribute("fill", "#059669");
+            gateTxt.textContent = "钢印闸门 / 校验 ID";
+            trashBin.style.opacity = "1";
+          } else {
+            gatePill.setAttribute("fill", "#FFFBEB");
+            gatePill.setAttribute("stroke", "#F59E0B");
+            gateTxt.setAttribute("fill", "#B45309");
+            gateTxt.textContent = "无校验 / 见包即领";
+            trashBin.style.opacity = "0.25";
+          }
+          envs.forEach(ev => (ev.stamp.style.opacity = sealMode ? "1" : "0"));
+
+          // Caller #1 times out at u = 0.20..0.30; Callers #2..#4 shift left by 1 slot!
+          const shiftLeft = smooth((prog - 0.22) / 0.12);
+          callers.forEach((c, i) => {
+            if (i === 0) {
+              const leave = smooth((prog - 0.18) / 0.1);
+              const x = lerp(SLOT_X[0], 74, leave);
+              const y = lerp(58, 58, leave);
+              c.g.setAttribute("transform", `translate(${f1(x)} ${f1(y)})`);
+              c.g.style.opacity = (1 - 0.62 * leave).toFixed(3);
+              c.status.textContent = leave > 0.3 ? "⏱ 超时离席" : "等待 200ms...";
+            } else {
+              const x = lerp(SLOT_X[i], SLOT_X[i - 1], shiftLeft);
+              c.g.setAttribute("transform", `translate(${f1(x)} 58)`);
+              c.g.style.opacity = "1";
+              c.curX = x;
+            }
+          });
+
+          // Envelopes choreography:
+          // Env 0 (blue #1), Env 1 (purple #2), Env 2 (amber #3), Env 3 (teal #4)
+          let droppedCount = 0;
+          envs.forEach((ev, i) => {
+            const startX = 740 + i * 135;
+            if (!sealMode) {
+              // FIFO mode: Env 0 goes to Caller #2 (at SLOT_X[0]), Env 1 -> Caller #3 (SLOT_X[1]), Env 2 -> Caller #4 (SLOT_X[2])!
+              const arrivalStart = 0.36 + i * 0.15;
+              if (i < 3) {
+                const targetX = SLOT_X[i]; // occupied by Caller #(i+2)!
+                const slide = clamp((prog - 0.05) / arrivalStart, 0, 1);
+                const lift = smooth((prog - arrivalStart) / 0.11);
+                const x = lerp(startX, targetX, slide);
+                const y = lerp(196, 96, lift);
+                ev.g.setAttribute("transform", `translate(${f1(x)} ${f1(y)}) scale(${f1(lerp(1, 0.86, lift))})`);
+                ev.g.style.opacity = prog < 0.04 ? "0" : "1";
+
+                const b = badges[i];
+                const bShow = smooth((prog - (arrivalStart + 0.09)) / 0.06);
+                b.g.style.opacity = bShow.toFixed(3);
+                b.g.setAttribute("transform", `translate(${f1(targetX)} 124)`);
+                b.r.setAttribute("fill", "#FEF2F2");
+                b.r.setAttribute("stroke", "#DC2626");
+                b.t.setAttribute("fill", "#DC2626");
+                b.t.textContent = `❌ #${i + 2} 错领了 #${i + 1}`;
+                callers[i + 1].status.textContent = bShow > 0.5 ? `实收: #${i + 1} (串号!)` : "排头等包中";
+              } else {
+                // Env 3 (#4) left stranded on belt with nobody waiting for it!
+                const slide = clamp((prog - 0.15) / 0.75, 0, 1);
+                const x = lerp(startX, 668, slide);
+                ev.g.setAttribute("transform", `translate(${f1(x)} 196)`);
+                ev.g.style.opacity = prog > 0.25 ? "1" : "0";
+              }
+            } else {
+              // SEAL MODE:
+              // Env 0 (#1) arrives at gate (x=212) at u=0.42, mismatches Caller #2 -> drops into trash bin (79, 282)!
+              // Env 1 (#2) -> Caller #2 (SLOT_X[0]), Env 2 (#3) -> Caller #3 (SLOT_X[1]), Env 3 (#4) -> Caller #4 (SLOT_X[2])!
+              if (i === 0) {
+                const toGate = clamp((prog - 0.05) / 0.35, 0, 1);
+                const drop = smooth((prog - 0.41) / 0.14);
+                const x = drop > 0 ? lerp(212, 79, drop) : lerp(startX, 212, toGate);
+                const y = drop > 0 ? lerp(196, 282, drop) : 196;
+                ev.g.setAttribute("transform", `translate(${f1(x)} ${f1(y)}) scale(${f1(lerp(1, 0.72, drop))})`);
+                ev.g.style.opacity = (1 - 0.75 * smooth((prog - 0.52) / 0.08)).toFixed(3);
+                if (drop > 0.6) droppedCount = 1;
+              } else {
+                const slotIdx = i - 1;
+                const arrivalStart = 0.44 + slotIdx * 0.14;
+                const targetX = SLOT_X[slotIdx];
+                const slide = clamp((prog - 0.08) / arrivalStart, 0, 1);
+                const lift = smooth((prog - arrivalStart) / 0.1);
+                const x = lerp(startX, targetX, slide);
+                const y = lerp(196, 96, lift);
+                ev.g.setAttribute("transform", `translate(${f1(x)} ${f1(y)}) scale(${f1(lerp(1, 0.86, lift))})`);
+                ev.g.style.opacity = "1";
+
+                const b = badges[slotIdx];
+                const bShow = smooth((prog - (arrivalStart + 0.08)) / 0.06);
+                b.g.style.opacity = bShow.toFixed(3);
+                b.g.setAttribute("transform", `translate(${f1(targetX)} 124)`);
+                b.r.setAttribute("fill", "#ECFDF5");
+                b.r.setAttribute("stroke", "#059669");
+                b.t.setAttribute("fill", "#059669");
+                b.t.textContent = `✓ #${i + 1} 精准配对`;
+                callers[i].status.textContent = bShow > 0.5 ? `实收: #${i + 1} (一致)` : "校验等待中";
+              }
+            }
+          });
+          trashTxt.textContent = `孤儿帧丢弃槽 (${droppedCount})`;
+
+          // Dynamic caption
+          if (!sealMode) {
+            if (activeIdx === 0) cap.innerHTML = "<b>阶段 ① 排队等待：</b>4 个席位按先后顺序排列，管道里的信封没有任何身份钢印。";
+            else if (activeIdx === 1) cap.innerHTML = "<b>阶段 ② 超时补位：</b>#1 蓝请求超时离场，#2 紫请求自动左移顶到认领窗口。";
+            else if (activeIdx === 2) cap.innerHTML = "<b>阶段 ③ 颜色错配：</b>沙箱刚算完的 #1 蓝信封滑到窗口，被 #2 紫席位直接领走！";
+            else cap.innerHTML = "<b>阶段 ④ 连环串号：</b>紫领蓝、琥珀领紫、青绿领琥珀——整条连接陷入永久一位偏移。";
+          } else {
+            if (activeIdx <= 1) cap.innerHTML = "<b>钢印模式 ①～②：</b>即使 #1 超时离场、#2 顶上窗口，每封回执右上角都带着不可篡改的 ID 钢印。";
+            else if (activeIdx === 2) cap.innerHTML = "<b>钢印模式 ③ 闸门拦截：</b>迟到的 ID:1 蓝信封与窗口的 #2 不符，直接滑入左下角孤儿帧丢弃槽。";
+            else cap.innerHTML = "<b>钢印模式 ④ 自动对齐：</b>紧随其后的 ID:2、ID:3、ID:4 严丝合缝回到各自同色席位手中。";
+          }
+        }
+
+        playBtn.addEventListener("click", () => { playing = !playing; setIcon(playIc, playing); });
+        range.addEventListener("input", () => {
+          playing = false; setIcon(playIc, false);
+          u = Number(range.value) / 1000;
+          render(u);
+        });
+        chapBtns.forEach(btn => {
+          btn.addEventListener("click", () => {
+            playing = false; setIcon(playIc, false);
+            u = Number(btn.dataset.t);
+            range.value = String(Math.round(u * 1000));
+            render(u);
+          });
+        });
+        btnFifo.addEventListener("click", () => {
+          sealMode = false; u = 0; playing = true; setIcon(playIc, true);
+          btnFifo.setAttribute("aria-pressed", "true");
+          btnSeal.setAttribute("aria-pressed", "false");
+          render(u);
+        });
+        btnSeal.addEventListener("click", () => {
+          sealMode = true; u = 0; playing = true; setIcon(playIc, true);
+          btnFifo.setAttribute("aria-pressed", "false");
+          btnSeal.setAttribute("aria-pressed", "true");
+          render(u);
+        });
+
+        function getChapIdx(prog) {
+          return prog < 0.22 ? 0 : prog < 0.45 ? 1 : prog < 0.76 ? 2 : 3;
+        }
+        prevBtn.addEventListener("click", () => {
+          playing = false; setIcon(playIc, false);
+          const idx = (getChapIdx(u) + 3) % 4;
+          u = CHAP_STOPS[idx];
+          range.value = String(Math.round(u * 1000));
+          render(u);
+        });
+        nextBtn.addEventListener("click", () => {
+          playing = false; setIcon(playIc, false);
+          const idx = (getChapIdx(u) + 1) % 4;
+          u = CHAP_STOPS[idx];
+          range.value = String(Math.round(u * 1000));
+          render(u);
+        });
+        speedBtns.forEach(sb => {
+          sb.addEventListener("click", () => {
+            speedMul = Number(sb.dataset.sp);
+            speedBtns.forEach(b => b.classList.toggle("active", b === sb));
+          });
+        });
+
+        let prev = performance.now();
+        function loop(now) {
+          const dt = Math.min(0.05, (now - prev) / 1000);
+          prev = now;
+          if (playing) {
+            u = (u + dt * 0.052 * speedMul) % 1;
+            range.value = String(Math.round(u * 1000));
+            render(u);
+          }
+          requestAnimationFrame(loop);
+        }
+        setIcon(playIc, true);
+        render(0);
+        requestAnimationFrame(loop);
+      })();
+
+      const figs = [...document.querySelectorAll(".distill-fig")];
+      let lockedW = 0;
+      function lockAllFigs() {
+        const w = Math.round(window.innerWidth);
+        if (Math.abs(w - lockedW) <= 1) return;
+        lockedW = w;
+        figs.forEach(fig => {
+          fig.style.height = "auto";
+          fig.style.height = `${fig.offsetHeight}px`;
+        });
+      }
+      window.addEventListener("resize", lockAllFigs);
+      lockAllFigs();
+    })();
+  </script>
+</body>
+</html>

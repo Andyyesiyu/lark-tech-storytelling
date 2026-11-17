@@ -1,0 +1,1387 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="use-iframe" content="true">
+  <meta name="html-box-height-mode" content="auto">
+  <title>推理引擎性能优化与版本迭代示例 — lark-tech-storytelling</title>
+  <style>
+    :root {
+      --page-wrap: #F3F4F6;
+      --bg: #FFFFFF;
+      --subtle: #F8FAFC;
+      --ink: #0F172A;
+      --ink-2: #334155;
+      --muted: #64748B;
+      --faint: #94A3B8;
+      --hairline: #E2E8F0;
+      --border-strong: #CBD5E1;
+
+      --blue: #1D4ED8;
+      --blue-fill: #DBEAFE;
+      --blue-soft: #EFF6FF;
+
+      --teal: #0F766E;
+      --teal-fill: #CCFBF1;
+      --teal-soft: #F0FDFA;
+
+      --violet: #6D28D9;
+      --violet-fill: #EDE9FE;
+      --violet-soft: #F5F3FF;
+
+      --amber: #B45309;
+      --amber-fill: #FEF3C7;
+
+      --green: #047857;
+      --green-soft: #ECFDF5;
+
+      --sans: -apple-system, BlinkMacSystemFont, "Inter", "PingFang SC", "Noto Sans SC", "Hiragino Sans GB", sans-serif;
+      --mono: "SF Mono", "JetBrains Mono", Menlo, Monaco, Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--page-wrap);
+      color: var(--ink);
+      font-family: var(--sans);
+      line-height: 1.75;
+      padding: 28px 16px 64px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .lark-page {
+      max-width: 880px;
+      margin: 0 auto;
+      background: var(--bg);
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05), 0 14px 36px rgba(15, 23, 42, 0.04);
+      padding: 46px 54px 60px;
+    }
+    @media (max-width: 680px) {
+      .lark-page { padding: 28px 20px 42px; }
+    }
+
+    h1.doc-title {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.32;
+      margin-bottom: 16px;
+      color: var(--ink);
+    }
+
+    .doc-lead {
+      border-left: 3px solid var(--ink);
+      padding: 2px 0 2px 16px;
+      margin-bottom: 30px;
+      color: var(--ink-2);
+      font-size: 14.8px;
+    }
+    .doc-lead p + p { margin-top: 6px; }
+
+    h2.sec-title {
+      font-size: 19.5px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      margin: 36px 0 12px;
+      color: var(--ink);
+    }
+
+    p.prose {
+      font-size: 15.5px;
+      color: var(--ink-2);
+      margin: 10px 0;
+    }
+    p.prose b { color: var(--ink); font-weight: 600; }
+
+    .cue-blue { background: var(--blue-soft); color: var(--blue); padding: 1px 6px; border-radius: 4px; font-weight: 500; font-size: 0.94em; }
+    .cue-violet { background: var(--violet-soft); color: var(--violet); padding: 1px 6px; border-radius: 4px; font-weight: 500; font-size: 0.94em; }
+    .cue-teal { background: var(--teal-soft); color: var(--teal); padding: 1px 6px; border-radius: 4px; font-weight: 500; font-size: 0.94em; }
+    .hl-warm { background: #FEF3C7; padding: 1px 5px; border-radius: 3px; color: var(--ink); font-weight: 500; }
+
+    /* =========================================================================
+       融合版通用组件：Distill 纯白无界画布 + Explorable 全手动慢速控制栏
+       ========================================================================= */
+    .story-fig {
+      margin: 24px 0 32px;
+      padding: 18px 0 16px;
+      border-top: 1px solid var(--hairline);
+      border-bottom: 1px solid var(--hairline);
+      background: #FFFFFF;
+      overflow: hidden;
+    }
+
+    .sf-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    .sf-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .sf-tag {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      background: var(--subtle);
+      border: 1px solid var(--hairline);
+      padding: 2px 7px;
+      border-radius: 4px;
+    }
+    .sf-title {
+      font-size: 14.5px;
+      font-weight: 600;
+      color: var(--ink);
+    }
+    .sf-hint {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    /* 顶部指标栏（按需出现） */
+    .sf-metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1.35fr;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    @media (max-width: 680px) {
+      .sf-metrics { grid-template-columns: repeat(2, 1fr); }
+    }
+    .sf-metric {
+      background: var(--subtle);
+      border: 1px solid var(--hairline);
+      border-radius: 8px;
+      padding: 8px 12px;
+      height: 54px;
+      min-width: 0;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    .sf-metric .m-lbl {
+      font-size: 11.5px;
+      color: var(--muted);
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .sf-metric .m-val {
+      font-family: var(--mono);
+      font-size: 15.5px;
+      font-weight: 700;
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+    }
+    #it-m-state {
+      font-family: var(--sans);
+      font-size: 12.5px;
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .sf-metric .m-delta {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--green);
+      margin-left: 4px;
+    }
+
+    .sf-canvas {
+      width: 100%;
+      background: #FFFFFF;
+      overflow: hidden;
+    }
+    .sf-canvas.ratio-mech { aspect-ratio: 820 / 308; }
+    .sf-canvas.ratio-iter { aspect-ratio: 820 / 246; }
+    .sf-canvas svg {
+      display: block;
+      width: 100%;
+      height: auto;
+      user-select: none;
+    }
+
+    /* 悬停聚光灯 */
+    .sf-canvas svg.hov [data-grp] {
+      opacity: 0.18 !important;
+      transition: opacity 0.18s ease;
+    }
+    .sf-canvas svg.hov [data-grp].lit {
+      opacity: 1 !important;
+    }
+
+    /* 手动慢节奏传输控制台 */
+    .transport-bar {
+      margin-top: 12px;
+      background: var(--subtle);
+      border: 1px solid var(--hairline);
+      border-radius: 10px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+    .tb-main {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .tb-btns {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      flex: none;
+    }
+    .tb-btn {
+      appearance: none;
+      border: 1px solid var(--border-strong);
+      background: #FFFFFF;
+      color: var(--ink);
+      height: 28px;
+      padding: 0 9px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      transition: all 0.14s ease;
+      font-family: var(--sans);
+    }
+    .tb-btn:hover { border-color: var(--ink); background: #F1F5F9; }
+    .tb-btn:active { transform: scale(0.97); }
+    .tb-btn.primary {
+      background: var(--ink);
+      border-color: var(--ink);
+      color: #FFFFFF;
+      min-width: 68px;
+    }
+    .tb-btn.primary:hover { opacity: 0.9; }
+
+    .tb-scrubber {
+      flex: 1;
+      min-width: 150px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .tb-scrubber input[type="range"] {
+      flex: 1;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 5px;
+      border-radius: 999px;
+      background: #CBD5E1;
+      outline: none;
+      cursor: pointer;
+    }
+    .tb-scrubber input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background: var(--blue);
+      border: 2.5px solid #FFFFFF;
+      box-shadow: 0 1px 4px rgba(15, 23, 42, 0.35);
+      cursor: grab;
+    }
+
+    .tb-readout {
+      font-family: var(--mono);
+      font-size: 11.5px;
+      color: var(--muted);
+      min-width: 82px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .speed-seg {
+      display: inline-flex;
+      background: #E2E8F0;
+      border-radius: 6px;
+      padding: 2px;
+      gap: 2px;
+      flex: none;
+    }
+    .speed-seg button {
+      border: 0;
+      background: transparent;
+      color: var(--ink-2);
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 7px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .speed-seg button.active {
+      background: #FFFFFF;
+      color: var(--ink);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+    }
+
+    .tb-sub {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: nowrap;
+      min-height: 26px;
+      overflow: hidden;
+    }
+    .step-pills {
+      display: flex;
+      gap: 6px;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .step-pills::-webkit-scrollbar { display: none; }
+    .step-pill {
+      appearance: none;
+      border: 1px solid var(--hairline);
+      background: #FFFFFF;
+      color: var(--muted);
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-family: var(--sans);
+      white-space: nowrap;
+      flex: none;
+    }
+    .step-pill:hover { border-color: var(--ink-2); color: var(--ink); }
+    .step-pill.active {
+      background: var(--blue-soft);
+      border-color: var(--blue);
+      color: var(--blue);
+    }
+
+    /* 版本迭代阶梯切换器（用于版本演进图，非红绿对立） */
+    .iter-stepper {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    @media (max-width: 680px) {
+      .iter-stepper { grid-template-columns: repeat(2, 1fr); }
+    }
+    .iter-card {
+      appearance: none;
+      text-align: left;
+      border: 1px solid var(--hairline);
+      background: var(--subtle);
+      border-radius: 8px;
+      padding: 9px 11px;
+      cursor: pointer;
+      transition: all 0.16s ease;
+      font-family: var(--sans);
+    }
+    .iter-card:hover { border-color: var(--border-strong); background: #FFFFFF; }
+    .iter-card.active {
+      background: #FFFFFF;
+      border-color: var(--blue);
+      box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.12);
+    }
+    .iter-ver {
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--blue);
+      display: block;
+    }
+    .iter-name {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--ink);
+      margin-top: 2px;
+      display: block;
+    }
+
+    .param-group {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+    .param-ctl {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 12px;
+      color: var(--ink-2);
+    }
+    .param-ctl input[type="range"] {
+      width: 96px;
+      accent-color: var(--teal);
+      cursor: pointer;
+    }
+    .param-ctl code {
+      font-family: var(--mono);
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--teal);
+      min-width: 56px;
+    }
+
+    .sf-caption {
+      margin-top: 9px;
+      font-size: 13px;
+      color: var(--ink-2);
+      line-height: 22px;
+      height: 44px;
+      overflow: hidden;
+    }
+    .sf-caption b { color: var(--ink); font-weight: 600; }
+
+    .iter-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 14px;
+      font-size: 13.8px;
+    }
+    .iter-table th {
+      text-align: left;
+      padding: 9px 12px;
+      border-bottom: 1.5px solid var(--border-strong);
+      color: var(--ink);
+      font-weight: 600;
+      background: var(--subtle);
+    }
+    .iter-table td {
+      padding: 9px 12px;
+      border-bottom: 1px solid var(--hairline);
+      color: var(--ink-2);
+    }
+  </style>
+</head>
+<body>
+  <!--
+    参考说明：本文件用于展示「飞书正文 + 内嵌交互图表」的文图呼应与渐进迭代效果；
+    实际为飞书 <html5-block> 生成单个独立 HTML 图表时，请参考 ../interactive-svg-template.html 只输出纯白无界图表容器，不要外包 .lark-page 模拟页框。
+  -->
+  <article class="lark-page">
+    <h1 class="doc-title">推理引擎 v1.4 性能优化纪要：混合分块调度与 GPU 气泡消减</h1>
+
+    <div class="doc-lead">
+      <p><b>迭代背景</b>：本轮 v1.1 → v1.4 连续迭代不涉及功能变更，核心目标是解决长上下文输入介入时 Decode 吐字卡顿，并将单卡 H800 有效算力利用率从 46% 推高至 92%。</p>
+      <p><b>核心改动</b>：调度层落地 <b>Chunked Prefill 混合预算拼装</b> 与 <b>Paged KV 非连续块映射</b>；执行层引入 <b>CUDA Graph 捕获与访存算子融合</b>。</p>
+    </div>
+
+    <!-- ==================== 第一节：纯单机制深度拆解（无任何 A/B 对比模式！） ==================== -->
+    <h2 class="sec-title">1. 单步调度解剖：长输入切块如何与存量吐字共享同一个 Forward？</h2>
+
+    <p class="prose">
+      在 v1.4 调度器中，每轮 Forward 设定固定的计算预算（例如 <code>Budget = 258 tokens</code>）。当一条 1024 tokens 的长上下文请求 <code>Req-A</code> 到达时，不再独占整张显卡一次性算完，而是被切分为 4 个 256-token 切片（<span class="cue-blue">蓝色 Prefill 切片 C₁～C₄</span>）。
+    </p>
+    <p class="prose">
+      每一轮迭代，调度器取出 <b>1 个切片（256）+ 2 个在途解码请求（<span class="cue-violet">紫色 Decode B/C 各 1 token</span>）</b>拼成混合 Batch 同趟执行，并将生成的 KV 向量按需写入右侧 <span class="cue-teal">非连续物理显存页块（Paged Blocks）</span>。<span class="hl-warm">在途会话每一拍都能准时吐出新词，完全感知不到长请求的存在</span>。
+    </p>
+
+    <!-- ==================== 图 1：单机制精细解剖（无模式对比，全手动步进+慢放） ==================== -->
+    <section class="story-fig" id="fig-mechanism">
+      <div class="sf-header">
+        <div class="sf-title-wrap">
+          <span class="sf-tag">Mechanism Anatomy</span>
+          <span class="sf-title">Chunked Prefill 混合预算拼装 &amp; Paged KV 物理页表映射（共 4 个调度拍）</span>
+        </div>
+        <span class="sf-hint">💡 点击「上一步 / 下一步」逐拍定格细看，或悬停任意块查看映射链路</span>
+      </div>
+
+      <div class="sf-canvas ratio-mech">
+        <svg id="svg-mech" viewBox="0 0 820 308" role="img" aria-label="Chunked Prefill 与 Paged KV 单步拼装映射解剖">
+          <defs>
+            <marker id="m-arr-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto">
+              <path d="M1 1.5 L9 5 L1 8.5 z" fill="#1D4ED8"/>
+            </marker>
+            <marker id="m-arr-teal" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto">
+              <path d="M1 1.5 L9 5 L1 8.5 z" fill="#0F766E"/>
+            </marker>
+          </defs>
+
+          <!-- 左栏：待调度序列切片 -->
+          <text x="16" y="22" font-size="12" font-weight="700" fill="#0F172A">1. 逻辑请求与切片队列</text>
+          <text x="16" y="38" font-size="10.5" fill="#64748B">长提示词 Req-A (1024 tok → 4×256)</text>
+          <g id="m-left-chunks"></g>
+
+          <text x="16" y="206" font-size="10.5" fill="#64748B">存量流式生成请求（每拍各需 1 tok）</text>
+          <g id="m-left-decodes"></g>
+
+          <!-- 中栏：GPU 单趟混合 Batch 槽（加宽至 254px，彻底消除文字溢出） -->
+          <text x="260" y="22" font-size="12" font-weight="700" fill="#0F172A">2. 统一混合 Forward 槽</text>
+          <text x="260" y="38" font-size="10.5" fill="#64748B" id="m-tick-sub">Token Budget 上限: 258 tokens / step</text>
+
+          <rect x="256" y="54" width="254" height="226" rx="10" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1.4"/>
+          <text x="383" y="76" text-anchor="middle" font-family="var(--mono)" font-size="11" font-weight="600" fill="#334155" id="m-batch-header">
+            Step 1 拼装明细 (258 / 258)
+          </text>
+
+          <!-- 混合槽内部可视化比例条（内宽 226px） -->
+          <g id="m-batch-slot" transform="translate(270 92)">
+            <rect id="m-slot-prefill" x="0" y="0" width="226" height="62" rx="7" fill="#DBEAFE" stroke="#1D4ED8" stroke-width="1.6"/>
+            <text id="m-slot-p-title" x="113" y="24" text-anchor="middle" font-size="12" font-weight="700" fill="#1D4ED8">Req-A / 切片 C₁</text>
+            <text id="m-slot-p-sub" x="113" y="43" text-anchor="middle" font-family="var(--mono)" font-size="10.5" fill="#1E40AF">范围 [0..256] / 256 tok</text>
+
+            <rect x="0" y="72" width="108" height="44" rx="6" fill="#EDE9FE" stroke="#6D28D9" stroke-width="1.5" data-grp="dec-b"/>
+            <text x="54" y="89" text-anchor="middle" font-size="11" font-weight="700" fill="#6D28D9" data-grp="dec-b">Decode B</text>
+            <text id="m-dec-b-tok" x="54" y="105" text-anchor="middle" font-family="var(--mono)" font-size="9.5" fill="#5B21B6" data-grp="dec-b">吐出 #b₁ (1 tok)</text>
+
+            <rect x="118" y="72" width="108" height="44" rx="6" fill="#EDE9FE" stroke="#6D28D9" stroke-width="1.5" data-grp="dec-c"/>
+            <text x="172" y="89" text-anchor="middle" font-size="11" font-weight="700" fill="#6D28D9" data-grp="dec-c">Decode C</text>
+            <text id="m-dec-c-tok" x="172" y="105" text-anchor="middle" font-family="var(--mono)" font-size="9.5" fill="#5B21B6" data-grp="dec-c">吐出 #c₁ (1 tok)</text>
+
+            <!-- 单步完成进度条 -->
+            <text x="0" y="138" font-size="10.5" fill="#64748B">当前 Step 算子执行进度</text>
+            <rect x="0" y="146" width="226" height="8" rx="4" fill="#E2E8F0"/>
+            <rect id="m-step-bar" x="0" y="146" width="0" height="8" rx="4" fill="#1D4ED8"/>
+            <text id="m-ttft-badge" x="113" y="174" text-anchor="middle" font-size="11" font-weight="600" fill="#047857"></text>
+          </g>
+
+          <!-- 右栏：Paged KV 4x4 物理显存池 -->
+          <text x="556" y="22" font-size="12" font-weight="700" fill="#0F172A">3. Paged KV 物理显存块池</text>
+          <text x="556" y="38" font-size="10.5" fill="#64748B">非连续自由页帧分配（零外部预留浪费）</text>
+          <g id="m-kv-grid" transform="translate(556 54)"></g>
+
+          <!-- 动态连线与慢速信号珠 -->
+          <g id="m-wires"></g>
+          <circle id="m-bead-in" r="4" fill="#1D4ED8" visibility="hidden"/>
+          <circle id="m-bead-kv" r="4" fill="#0F766E" visibility="hidden"/>
+        </svg>
+      </div>
+
+      <!-- 全手动慢速控制栏 -->
+      <div class="transport-bar">
+        <div class="tb-main">
+          <div class="tb-btns">
+            <button type="button" class="tb-btn" id="m-prev" title="定格到上一拍">◀ 上一步</button>
+            <button type="button" class="tb-btn primary" id="m-play">⏸ 暂停</button>
+            <button type="button" class="tb-btn" id="m-next" title="定格到下一拍">下一步 ▶</button>
+          </div>
+          <div class="tb-scrubber">
+            <input type="range" id="m-scrub" min="0" max="1000" value="0">
+          </div>
+          <span class="tb-readout" id="m-readout">Tick 1 / 4</span>
+          <div class="speed-seg" id="m-speed">
+            <button type="button" data-spd="0.5">0.5×</button>
+            <button type="button" data-spd="1" class="active">1.0×</button>
+            <button type="button" data-spd="1.5">1.5×</button>
+          </div>
+        </div>
+        <div class="tb-sub">
+          <div class="step-pills" id="m-pills">
+            <button type="button" class="step-pill active" data-step="0">Tick 1: C₁ 入槽分配页 #02</button>
+            <button type="button" class="step-pill" data-step="1">Tick 2: C₂ 续接页 #07</button>
+            <button type="button" class="step-pill" data-step="2">Tick 3: C₃ 续接页 #11</button>
+            <button type="button" class="step-pill" data-step="3">Tick 4: C₄ 算完吐出首字</button>
+          </div>
+          <span style="font-size:11.5px;color:var(--muted)" id="m-mode-ind">慢速自动巡演中（点击任一按钮即转入手动定格）</span>
+        </div>
+      </div>
+
+      <p class="sf-caption" id="m-caption">
+        <b>Tick 1 / 4 解读：</b>长请求 Req-A 的第 1 块切片 <code>C₁ [0..256]</code> 与在途请求 B、C 合并执行；生成的 KV 写入空闲物理页 <code>Blk #02</code>，同时 B、C 正常吐出第 1 个词，零阻塞。
+      </p>
+    </section>
+
+    <!-- ==================== 第二节：渐进式版本迭代（v1.1 → v1.4 叠加式演进 + 参数推演） ==================== -->
+    <h2 class="sec-title">2. 四轮版本迭代轨迹：GPU 流水线里的空闲气泡是怎么被挤干的？</h2>
+
+    <p class="prose">
+      性能优化不是非黑即白的“修 Bug”，而是一轮接一轮把硬件时间轴上的空白缝隙填满的过程：<b>v1.1</b> 跑通静态批处理基线后，<b>v1.2</b> 消除了短请求提前结束留下的尾部 Padding 空洞，<b>v1.3</b> 拆散巨型 Prefill 抚平了吐字毛刺，而本次 <b>v1.4</b> 则通过 CUDA Graph 与算子融合抹平了内核启动间隙。
+    </p>
+    <p class="prose">
+      下方时间轴展示了 120ms 窗口内 GPU 真实算力排布——你可以<b>依次点击上方 4 个版本号查看每一代各自填平了哪块气泡</b>，也可以手动拖动扫描游标或调节 <b>长提示词长度</b> 观察吞吐与 P99 吐字延迟的变化：
+    </p>
+
+    <!-- ==================== 图 2：渐进版本迭代阶梯 + 可调参数 GPU Stream 时间轴 ==================== -->
+    <section class="story-fig" id="fig-iteration">
+      <div class="sf-header">
+        <div class="sf-title-wrap">
+          <span class="sf-tag">Progressive Iteration / v1.1 - v1.4</span>
+          <span class="sf-title">GPU Stream 120ms 排布演进与空闲气泡（Bubble）压缩</span>
+        </div>
+        <span class="sf-hint">点击下方版本卡片逐步叠加优化项 / 拖动滑块手动检视任意毫秒</span>
+      </div>
+
+      <!-- 4 代版本演进选择器（渐进正向迭代，非红绿故障对立） -->
+      <div class="iter-stepper" id="it-vers">
+        <button type="button" class="iter-card" data-v="0">
+          <span class="iter-ver">v1.1 / 基线版本</span>
+          <span class="iter-name">静态同批对齐调度</span>
+        </button>
+        <button type="button" class="iter-card" data-v="1">
+          <span class="iter-ver">v1.2 / 调度迭代</span>
+          <span class="iter-name">+ Continuous 动态插空</span>
+        </button>
+        <button type="button" class="iter-card" data-v="2">
+          <span class="iter-ver">v1.3 / 延迟迭代</span>
+          <span class="iter-name">+ Chunked 分块穿插</span>
+        </button>
+        <button type="button" class="iter-card active" data-v="3">
+          <span class="iter-ver">v1.4 / 本次发版</span>
+          <span class="iter-name">+ CUDA Graph 算子融合</span>
+        </button>
+      </div>
+
+      <div class="sf-metrics">
+        <div class="sf-metric">
+          <span class="m-lbl">GPU SM 有效算力占比</span>
+          <span class="m-val" id="it-m-sm">92%</span><span class="m-delta" id="it-d-sm">+46pt</span>
+        </div>
+        <div class="sf-metric">
+          <span class="m-lbl">有效吞吐 (Throughput)</span>
+          <span class="m-val" id="it-m-tps">4,860 tok/s</span>
+        </div>
+        <div class="sf-metric">
+          <span class="m-lbl">在途解码 P99 TPOT</span>
+          <span class="m-val" id="it-m-tpot">14.2 ms</span>
+        </div>
+        <div class="sf-metric">
+          <span class="m-lbl">游标处瞬时状态</span>
+          <span class="m-val" id="it-m-state" style="color:var(--blue)">融合算子满载运算</span>
+        </div>
+      </div>
+
+      <div class="sf-canvas ratio-iter">
+        <svg id="svg-iter" viewBox="0 0 820 246" role="img" aria-label="v1.1 至 v1.4 四代推理引擎 GPU 时间轴排布演进">
+          <defs>
+            <pattern id="bubble-hatch" width="8" height="8" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
+              <line x1="0" y1="0" x2="0" y2="8" stroke="#CBD5E1" stroke-width="2.2"/>
+            </pattern>
+          </defs>
+
+          <!-- 图例栏 -->
+          <g transform="translate(148 16)" font-size="10.5" fill="#475569">
+            <rect x="0" y="-8" width="12" height="10" rx="2" fill="#DBEAFE" stroke="#1D4ED8"/>
+            <text x="17" y="0">Prefill 预填充</text>
+
+            <rect x="112" y="-8" width="12" height="10" rx="2" fill="#EDE9FE" stroke="#6D28D9"/>
+            <text x="129" y="0">Decode 吐字步</text>
+
+            <rect x="224" y="-8" width="12" height="10" rx="2" fill="#CCFBF1" stroke="#0F766E"/>
+            <text x="241" y="0">HBM 异步预取重叠</text>
+
+            <rect x="358" y="-8" width="12" height="10" rx="2" fill="url(#bubble-hatch)" stroke="#94A3B8"/>
+            <text x="375" y="0">GPU 空闲气泡 / Launch 间隙</text>
+          </g>
+
+          <!-- 三条硬件观测泳道标签 -->
+          <text x="14" y="64" font-size="11.5" font-weight="700" fill="#0F172A">Slot 槽位 1–2</text>
+          <text x="14" y="80" font-size="10" fill="#64748B">常规流式会话</text>
+
+          <text x="14" y="130" font-size="11.5" font-weight="700" fill="#0F172A">Slot 槽位 3–4</text>
+          <text x="14" y="146" font-size="10" fill="#64748B">长上下文接入轨</text>
+
+          <text x="14" y="192" font-size="11.5" font-weight="700" fill="#0F172A">HBM 访存 / 调度</text>
+          <text x="14" y="208" font-size="10" fill="#64748B">CPU 下发与带宽</text>
+
+          <!-- 泳道底框 -->
+          <rect x="148" y="42" width="654" height="48" rx="6" fill="#F8FAFC" stroke="#E2E8F0"/>
+          <rect x="148" y="108" width="654" height="48" rx="6" fill="#F8FAFC" stroke="#E2E8F0"/>
+          <rect x="148" y="174" width="654" height="38" rx="6" fill="#F8FAFC" stroke="#E2E8F0"/>
+
+          <!-- 动态甘特块层 -->
+          <g id="it-blocks"></g>
+
+          <!-- 底部毫秒标尺 -->
+          <g id="it-ruler" font-family="var(--mono)" font-size="10" fill="#94A3B8"></g>
+
+          <!-- 可手动拖拽的精密扫描游标 -->
+          <g id="it-cursor">
+            <line id="it-cur-line" x1="148" y1="32" x2="148" y2="218" stroke="#0F172A" stroke-width="1.8"/>
+            <rect id="it-cur-pill" x="122" y="22" width="52" height="16" rx="4" fill="#0F172A"/>
+            <text id="it-cur-txt" x="148" y="30.5" text-anchor="middle" dominant-baseline="central" font-family="var(--mono)" font-size="9.5" font-weight="700" fill="#FFFFFF">0.0ms</text>
+          </g>
+        </svg>
+      </div>
+
+      <!-- 全手动慢速控制栏 + 参数微调器 -->
+      <div class="transport-bar">
+        <div class="tb-main">
+          <div class="tb-btns">
+            <button type="button" class="tb-btn" id="it-prev" title="切换到上一代版本">◀ 上一版本</button>
+            <button type="button" class="tb-btn primary" id="it-play">▶ 播放扫描</button>
+            <button type="button" class="tb-btn" id="it-next" title="切换到下一代版本">下一版本 ▶</button>
+          </div>
+          <div class="tb-scrubber">
+            <input type="range" id="it-scrub" min="0" max="1200" value="360">
+          </div>
+          <span class="tb-readout" id="it-readout">36.0 / 120ms</span>
+          <div class="speed-seg" id="it-speed">
+            <button type="button" data-spd="0.5" class="active">0.5×</button>
+            <button type="button" data-spd="1">1.0×</button>
+          </div>
+        </div>
+        <div class="tb-sub">
+          <div class="param-group">
+            <label class="param-ctl">
+              <span>新接入长提示词长度</span>
+              <input type="range" id="it-prompt-len" min="1024" max="4096" step="512" value="2048">
+              <code id="it-prompt-val">2048 tok</code>
+            </label>
+          </div>
+          <span style="font-size:11.5px;color:var(--muted)">提示：默认定格便于阅读，可直接拖动时间轴或点击「播放扫描」</span>
+        </div>
+      </div>
+
+      <p class="sf-caption" id="it-caption">
+        <b>v1.4（本次发版）亮点：</b>在 v1.3 分块穿插基础上，将零碎的小算子捕获进单张 <b>CUDA Graph</b> 并完成 Attention+RoPE 访存融合，彻底省去步间 CPU 下发间隙，HBM 异步预取与 Tensor Core 计算完全重叠。
+      </p>
+    </section>
+
+    <!-- ==================== 第三节：精简版本收益汇总表 ==================== -->
+    <h2 class="sec-title">3. 连续四个版本的演进收益台账</h2>
+
+    <table class="iter-table">
+      <colgroup>
+        <col width="110"/>
+        <col width="210"/>
+        <col width="280"/>
+        <col width="180"/>
+      </colgroup>
+      <thead>
+        <tr>
+          <th>迭代版本</th>
+          <th>核心机制演进</th>
+          <th>消除的主要开销（气泡来源）</th>
+          <th>H800 实测吞吐 / P99 TPOT</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>v1.1</b></td>
+          <td>静态 Batch 对齐调度</td>
+          <td>跑通批处理基线（存在尾部 Padding 空等）</td>
+          <td>2,140 tok/s / 68.5 ms</td>
+        </tr>
+        <tr>
+          <td><b>v1.2</b></td>
+          <td>Continuous Batching + Paged KV</td>
+          <td>消除短序列提前结束后的显存预留与槽位空转</td>
+          <td>3,290 tok/s / 49.0 ms</td>
+        </tr>
+        <tr>
+          <td><b>v1.3</b></td>
+          <td>Chunked Prefill 预算切块</td>
+          <td>消除长输入独占 GPU 导致的在途吐字长毛刺</td>
+          <td>4,120 tok/s / 18.6 ms</td>
+        </tr>
+        <tr>
+          <td><b>v1.4 (当前)</b></td>
+          <td>CUDA Graph + 访存算子融合</td>
+          <td>抹平高频微步间的 CPU Launch 间隙与冗余 HBM 读写</td>
+          <td><b>4,860 tok/s / 14.2 ms</b></td>
+        </tr>
+      </tbody>
+    </table>
+  </article>
+
+  <script>
+    (() => {
+      const NS = "http://www.w3.org/2000/svg";
+      const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+      const smooth = u => { const x = clamp(u, 0, 1); return x * x * (3 - 2 * x); };
+      const lerp = (a, b, u) => a + (b - a) * u;
+      const f1 = n => n.toFixed(1);
+
+      function el(tag, attrs = {}, parent = null) {
+        const node = document.createElementNS(NS, tag);
+        for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+        if (parent) parent.appendChild(node);
+        return node;
+      }
+
+      /* =========================================================================
+         FIG 1: Pure Single-Mechanism Anatomy (Chunked Prefill + Paged KV)
+         - Slow, deliberate 18-second full cycle (4.5s per tick with dwell pause!)
+         - Step Prev / Step Next pauses cleanly on exact milestone
+         ========================================================================= */
+      (function initMechanismFig() {
+        const svg = document.getElementById("svg-mech");
+        const gChunks = document.getElementById("m-left-chunks");
+        const gDecodes = document.getElementById("m-left-decodes");
+        const gKv = document.getElementById("m-kv-grid");
+        const gWires = document.getElementById("m-wires");
+
+        const batchHeader = document.getElementById("m-batch-header");
+        const slotPTitle = document.getElementById("m-slot-p-title");
+        const slotPSub = document.getElementById("m-slot-p-sub");
+        const decBTok = document.getElementById("m-dec-b-tok");
+        const decCTok = document.getElementById("m-dec-c-tok");
+        const stepBar = document.getElementById("m-step-bar");
+        const ttftBadge = document.getElementById("m-ttft-badge");
+        const beadIn = document.getElementById("m-bead-in");
+        const beadKv = document.getElementById("m-bead-kv");
+
+        // Physical non-contiguous KV pages mapped to C1..C4, Decode B, Decode C
+        const CHUNK_PAGES = [2, 7, 11, 14];
+        const PRE_OCCUPIED = new Map([
+          [0, { tag: "B:历史", grp: "dec-b", col: "#6D28D9", bg: "#EDE9FE" }],
+          [5, { tag: "B:新增", grp: "dec-b", col: "#6D28D9", bg: "#EDE9FE" }],
+          [9, { tag: "C:历史", grp: "dec-c", col: "#6D28D9", bg: "#EDE9FE" }],
+          [12, { tag: "C:新增", grp: "dec-c", col: "#6D28D9", bg: "#EDE9FE" }]
+        ]);
+
+        // Left 4 chunks of Req-A
+        const chunkEls = [0, 1, 2, 3].map(i => {
+          const y = 52 + i * 34;
+          const g = el("g", { "data-grp": `c-${i}`, style: "cursor:pointer" }, gChunks);
+          const r = el("rect", { x: 16, y, width: 196, height: 28, rx: 6, fill: "#EFF6FF", stroke: "#93C5FD", "stroke-width": "1.4" }, g);
+          const t1 = el("text", { x: 28, y: y + 14.5, "dominant-baseline": "central", "font-size": "11.5", "font-weight": "600", fill: "#1E3A8A" }, g);
+          t1.textContent = `切片 C${"₁₂₃₄"[i]}`;
+          const t2 = el("text", { x: 202, y: y + 14.5, "text-anchor": "end", "dominant-baseline": "central", "font-family": "var(--mono)", "font-size": "10", fill: "#3B82F6" }, g);
+          t2.textContent = `[${i * 256}..${(i + 1) * 256}]`;
+          return { i, y: y + 14, g, r, t2 };
+        });
+
+        // Left 2 active Decode streams (concise text so left/right labels have generous breathing room)
+        ["Decode B (#1)", "Decode C (#2)"].forEach((lbl, idx) => {
+          const y = 218 + idx * 32;
+          const grp = idx === 0 ? "dec-b" : "dec-c";
+          const g = el("g", { "data-grp": grp, style: "cursor:pointer" }, gDecodes);
+          el("rect", { x: 16, y, width: 196, height: 26, rx: 6, fill: "#F5F3FF", stroke: "#C4B5FD", "stroke-width": "1.3" }, g);
+          const t = el("text", { x: 28, y: y + 13.5, "dominant-baseline": "central", "font-size": "11", "font-weight": "600", fill: "#5B21B6" }, g);
+          t.textContent = lbl;
+          const tag = el("text", { x: 202, y: y + 13.5, "text-anchor": "end", "dominant-baseline": "central", "font-family": "var(--mono)", "font-size": "9.5", fill: "#7C3AED" }, g);
+          tag.textContent = "每拍 +1 tok";
+        });
+
+        // Right 4x4 Paged KV Grid (16 blocks)
+        const kvBlocks = Array.from({ length: 16 }, (_, idx) => {
+          const row = Math.floor(idx / 4), col = idx % 4;
+          const x = col * 62, y = row * 57;
+          const pre = PRE_OCCUPIED.get(idx);
+          const chunkIdx = CHUNK_PAGES.indexOf(idx);
+          const grp = pre ? pre.grp : chunkIdx >= 0 ? `c-${chunkIdx}` : `free-${idx}`;
+
+          const g = el("g", { transform: `translate(${x} ${y})`, "data-grp": grp, style: "cursor:pointer" }, gKv);
+          const r = el("rect", {
+            x: 0, y: 0, width: 54, height: 48, rx: 7,
+            fill: pre ? pre.bg : "#F8FAFC",
+            stroke: pre ? pre.col : "#CBD5E1",
+            "stroke-width": pre ? "1.5" : "1.2"
+          }, g);
+          const idTxt = el("text", { x: 27, y: 16, "text-anchor": "middle", "font-family": "var(--mono)", "font-size": "9.5", "font-weight": "600", fill: "#64748B" }, g);
+          idTxt.textContent = `#${String(idx).padStart(2, "0")}`;
+          const stTxt = el("text", { x: 27, y: 34, "text-anchor": "middle", "font-size": "9.5", "font-weight": "600", fill: pre ? pre.col : "#94A3B8" }, g);
+          stTxt.textContent = pre ? pre.tag : "空闲页";
+
+          return { idx, cx: 556 + x, cy: 54 + y + 24, r, idTxt, stTxt, pre, chunkIdx };
+        });
+
+        // Connector paths
+        const wireIn = el("path", { fill: "none", stroke: "#1D4ED8", "stroke-width": "2", "marker-end": "url(#m-arr-blue)" }, gWires);
+        const kvWires = [0, 1, 2, 3].map(i =>
+          el("path", { fill: "none", stroke: "#0F766E", "stroke-width": "1.8", "data-grp": `c-${i}`, style: "opacity:0" }, gWires)
+        );
+
+        // Hover spotlight (persists hovered target across tick transitions without flicker)
+        let hoveredHit = null;
+        function syncHover() {
+          const grp = hoveredHit ? hoveredHit.getAttribute("data-grp") : null;
+          if (!grp || grp.startsWith("free-")) {
+            svg.classList.remove("hov");
+            svg.querySelectorAll(".lit").forEach(n => n.classList.remove("lit"));
+            return;
+          }
+          svg.classList.add("hov");
+          svg.querySelectorAll("[data-grp]").forEach(n => {
+            n.classList.toggle("lit", n.getAttribute("data-grp") === grp);
+          });
+        }
+        svg.addEventListener("pointermove", e => {
+          hoveredHit = (e.target.closest && e.target.closest("[data-grp]")) || null;
+          syncHover();
+        });
+        svg.addEventListener("pointerleave", () => {
+          hoveredHit = null;
+          syncHover();
+        });
+
+        // Slow, calm state machine: u in [0, 4) -> 4 ticks; 1 full loop = 18 seconds at 1.0x!
+        let u = 0; // 0 .. 3.999
+        let playing = true;
+        let speed = 1.0;
+
+        const btnPrev = document.getElementById("m-prev");
+        const btnPlay = document.getElementById("m-play");
+        const btnNext = document.getElementById("m-next");
+        const scrub = document.getElementById("m-scrub");
+        const readout = document.getElementById("m-readout");
+        const modeInd = document.getElementById("m-mode-ind");
+        const cap = document.getElementById("m-caption");
+        const pills = [...document.querySelectorAll("#m-pills .step-pill")];
+        const spdBtns = [...document.querySelectorAll("#m-speed button")];
+
+        const CAPTIONS = [
+          "<b>Tick 1 / 4 解读：</b>长请求 Req-A 的第 1 块切片 <code>C₁ [0..256]</code> 与在途请求 B、C 合并进同一趟 Forward；生成的 KV 写入物理页 <code>#02</code>，B、C 准时吐出第 1 个词。",
+          "<b>Tick 2 / 4 解读：</b>切片 <code>C₂ [256..512]</code> 入槽，注意力读取 <code>#02</code> 历史页并将新 KV 写入非连续空闲页 <code>#07</code>；B、C 丝滑吐出第 2 个词，无需等待长请求。",
+          "<b>Tick 3 / 4 解读：</b>切片 <code>C₃ [512..768]</code> 入槽，KV 映射至空闲页 <code>#11</code>；物理显存按需逐页申领，彻底消除连续大块显存预留碎片。",
+          "<b>Tick 4 / 4 解读：</b>最后一块 <code>C₄ [768..1024]</code> 算完写入页 <code>#14</code>，Req-A 顺利吐出<b>首个生成词（TTFT 达成）</b>，下一拍起它也将转为 1-token Decode 态！"
+        ];
+
+        function setPlayingState(on, manualMsg) {
+          playing = on;
+          btnPlay.textContent = playing ? "⏸ 暂停" : "▶ 播放";
+          modeInd.textContent = playing
+            ? `慢速巡演中 (${speed.toFixed(1)}× / 每拍约 ${(4.5 / speed).toFixed(1)} 秒)`
+            : (manualMsg || "已定格在手动浏览模式（可逐拍点击或拖拽细看）");
+        }
+
+        function render(pos) {
+          const tickIdx = clamp(Math.floor(pos), 0, 3);
+          const rawSub = pos - tickIdx;
+          const sub = clamp(rawSub / 0.72, 0, 1);
+
+          readout.textContent = `Tick ${tickIdx + 1} / 4`;
+          pills.forEach((p, idx) => p.classList.toggle("active", idx === tickIdx));
+          cap.innerHTML = CAPTIONS[tickIdx];
+
+          batchHeader.textContent = `Tick ${tickIdx + 1} 拼装明细 (258 / 258 tok)`;
+          slotPTitle.textContent = `Req-A / 切片 C${"₁₂₃₄"[tickIdx]}`;
+          slotPSub.textContent = `范围 [${tickIdx * 256}..${(tickIdx + 1) * 256}] / 256 tok`;
+          document.getElementById("m-slot-prefill").setAttribute("data-grp", `c-${tickIdx}`);
+
+          decBTok.textContent = `吐出 #b${"₁₂₃₄"[tickIdx]} (1 tok)`;
+          decCTok.textContent = `吐出 #c${"₁₂₃₄"[tickIdx]} (1 tok)`;
+          stepBar.setAttribute("width", f1(226 * smooth(sub)));
+          ttftBadge.textContent = tickIdx === 3 && sub > 0.75 ? "🎉 Req-A 完成全部 Prefill，吐出首字！" : "";
+
+          // Left chunks styling
+          chunkEls.forEach((ce, idx) => {
+            if (idx < tickIdx) {
+              ce.r.setAttribute("fill", "#F0FDFA");
+              ce.r.setAttribute("stroke", "#0F766E");
+              ce.r.setAttribute("stroke-width", "1.4");
+              ce.t2.textContent = `✓ 已驻留页 #${String(CHUNK_PAGES[idx]).padStart(2, "0")}`;
+              ce.t2.setAttribute("fill", "#0F766E");
+            } else if (idx === tickIdx) {
+              ce.r.setAttribute("fill", "#DBEAFE");
+              ce.r.setAttribute("stroke", "#1D4ED8");
+              ce.r.setAttribute("stroke-width", "2.2");
+              ce.t2.textContent = "▶ 本拍入槽执行";
+              ce.t2.setAttribute("fill", "#1D4ED8");
+            } else {
+              ce.r.setAttribute("fill", "#F8FAFC");
+              ce.r.setAttribute("stroke", "#CBD5E1");
+              ce.r.setAttribute("stroke-width", "1.2");
+              ce.t2.textContent = `排队中 [${idx * 256}..${(idx + 1) * 256}]`;
+              ce.t2.setAttribute("fill", "#64748B");
+            }
+          });
+
+          // Active intake wire from left chunk[tickIdx] -> center slot
+          const srcY = chunkEls[tickIdx].y;
+          const dIn = `M 212 ${f1(srcY)} C 238 ${f1(srcY)}, 242 123, 266 123`;
+          wireIn.setAttribute("d", dIn);
+          if (sub > 0.02 && sub < 0.55) {
+            const len = wireIn.getTotalLength();
+            const pt = wireIn.getPointAtLength(len * (sub / 0.55));
+            beadIn.setAttribute("cx", f1(pt.x));
+            beadIn.setAttribute("cy", f1(pt.y));
+            beadIn.setAttribute("visibility", "visible");
+          } else {
+            beadIn.setAttribute("visibility", "hidden");
+          }
+
+          // Right KV Pages & mapping wires
+          kvBlocks.forEach(kb => {
+            if (kb.pre) return;
+            const cIdx = kb.chunkIdx;
+            if (cIdx < 0) return;
+            const allocated = cIdx < tickIdx || (cIdx === tickIdx && sub >= 0.45);
+            const activeNow = cIdx === tickIdx && sub >= 0.45;
+            kb.r.setAttribute("fill", activeNow ? "#CCFBF1" : allocated ? "#F0FDFA" : "#F8FAFC");
+            kb.r.setAttribute("stroke", allocated ? "#0F766E" : "#CBD5E1");
+            kb.r.setAttribute("stroke-width", activeNow ? "2.3" : allocated ? "1.6" : "1.2");
+            kb.stTxt.textContent = allocated ? `A / C${"₁₂₃₄"[cIdx]}` : "空闲页";
+            kb.stTxt.setAttribute("fill", allocated ? "#0F766E" : "#94A3B8");
+          });
+
+          kvWires.forEach((w, idx) => {
+            const pageIdx = CHUNK_PAGES[idx];
+            const kb = kvBlocks[pageIdx];
+            const show = idx < tickIdx || (idx === tickIdx && sub >= 0.35);
+            w.style.opacity = show ? (idx === tickIdx ? "1" : "0.35") : "0";
+            w.setAttribute("stroke-dasharray", idx === tickIdx ? "none" : "4 3");
+            if (show) {
+              const dKv = `M 496 123 C 526 123, 526 ${f1(kb.cy)}, ${f1(kb.cx - 3)} ${f1(kb.cy)}`;
+              w.setAttribute("d", dKv);
+              w.setAttribute("marker-end", "url(#m-arr-teal)");
+              if (idx === tickIdx && sub >= 0.35 && sub < 0.92) {
+                const len = w.getTotalLength();
+                const pt = w.getPointAtLength(len * ((sub - 0.35) / 0.57));
+                beadKv.setAttribute("cx", f1(pt.x));
+                beadKv.setAttribute("cy", f1(pt.y));
+                beadKv.setAttribute("visibility", "visible");
+              }
+            }
+          });
+          if (!(sub >= 0.35 && sub < 0.92)) beadKv.setAttribute("visibility", "hidden");
+          syncHover();
+        }
+
+        // Manual step & scrubber handlers
+        function jumpToTick(targetTick) {
+          const wrapped = ((targetTick % 4) + 4) % 4;
+          // Land at 0.62 inside that tick so the completed mapping is crystal clear & frozen!
+          u = wrapped + 0.62;
+          scrub.value = String(Math.round((u / 4) * 1000));
+          setPlayingState(false, `已手动定格在 Tick ${wrapped + 1} / 4`);
+          render(u);
+        }
+
+        btnPrev.addEventListener("click", () => jumpToTick(Math.floor(u) - 1));
+        btnNext.addEventListener("click", () => jumpToTick(Math.floor(u) + 1));
+        btnPlay.addEventListener("click", () => setPlayingState(!playing));
+
+        scrub.addEventListener("input", () => {
+          u = (Number(scrub.value) / 1000) * 3.999;
+          setPlayingState(false, "正在手动拖拽时间轴检视");
+          render(u);
+        });
+
+        pills.forEach(p => {
+          p.addEventListener("click", () => jumpToTick(Number(p.dataset.step)));
+        });
+
+        spdBtns.forEach(b => {
+          b.addEventListener("click", () => {
+            spdBtns.forEach(x => x.classList.remove("active"));
+            b.classList.add("active");
+            speed = Number(b.dataset.spd);
+            if (playing) setPlayingState(true);
+          });
+        });
+
+        let last = performance.now();
+        function loop(now) {
+          const dt = Math.min(0.05, (now - last) / 1000);
+          last = now;
+          if (playing) {
+            // Very gentle, human-readable pace: 4.5s per tick (18s full cycle) at 1.0x!
+            u = (u + dt * 0.22 * speed) % 4;
+            scrub.value = String(Math.round((u / 4) * 1000));
+            render(u);
+          }
+          requestAnimationFrame(loop);
+        }
+        render(0.5);
+        requestAnimationFrame(loop);
+      })();
+
+      /* =========================================================================
+         FIG 2: Progressive Version Iteration (v1.1 -> v1.2 -> v1.3 -> v1.4)
+         - Starts PAUSED at t = 36.0ms on v1.4 so nothing rushes past!
+         - User can step across versions, drag millisecond playhead, or slow-scan
+         ========================================================================= */
+      (function initIterationFig() {
+        const gBlocks = document.getElementById("it-blocks");
+        const gRuler = document.getElementById("it-ruler");
+        const curLine = document.getElementById("it-cur-line");
+        const curPill = document.getElementById("it-cur-pill");
+        const curTxt = document.getElementById("it-cur-txt");
+
+        const mSm = document.getElementById("it-m-sm");
+        const dSm = document.getElementById("it-d-sm");
+        const mTps = document.getElementById("it-m-tps");
+        const mTpot = document.getElementById("it-m-tpot");
+        const mState = document.getElementById("it-m-state");
+        const cap = document.getElementById("it-caption");
+
+        const verCards = [...document.querySelectorAll("#it-vers .iter-card")];
+        const btnPrev = document.getElementById("it-prev");
+        const btnPlay = document.getElementById("it-play");
+        const btnNext = document.getElementById("it-next");
+        const scrub = document.getElementById("it-scrub");
+        const readout = document.getElementById("it-readout");
+        const promptSlider = document.getElementById("it-prompt-len");
+        const promptVal = document.getElementById("it-prompt-val");
+        const spdBtns = [...document.querySelectorAll("#it-speed button")];
+
+        const X0 = 148, W = 654, MAX_MS = 120;
+        for (let ms = 0; ms <= 120; ms += 20) {
+          const x = X0 + (ms / MAX_MS) * W;
+          el("line", { x1: f1(x), y1: 38, x2: f1(x), y2: 216, stroke: "#E2E8F0", "stroke-width": "1", "stroke-dasharray": "2 2" }, gRuler);
+          const t = el("text", { x: f1(x), y: 234, "text-anchor": "middle" }, gRuler);
+          t.textContent = `${ms}ms`;
+        }
+
+        let verIdx = 3; // Default to latest iteration v1.4!
+        let curMs = 36.0;
+        let playing = false; // Default paused for calm inspection!
+        let speed = 0.5;
+        let promptTokens = 2048;
+
+        const VER_DESC = [
+          "<b>v1.1（静态批处理基线）：</b>同批短请求算完后必须干等最长的序列结束（产生大片斜纹 Padding 气泡）；长请求到达时独占整卡，在途会话被迫停摆等待。",
+          "<b>v1.2（+ Continuous 动态插空）：</b>引入 Paged KV 后，槽位一旦释放立刻塞入新请求，彻底消除尾部 Padding 空等；但长请求的整块 Prefill 仍会阻塞在途吐字。",
+          "<b>v1.3（+ Chunked 分块穿插）：</b>将长提示词拆成均匀切片与 Decode 同趟混合执行，在途吐字延迟从 ~50ms 骤降至 18ms 级；仅剩高频微步间的 CPU Launch 缝隙。",
+          "<b>v1.4（+ CUDA Graph &amp; 算子融合）：</b>捕获整段执行图并融合访存密集算子，抹平步间 CPU 调度缝隙，HBM 权重/KV 异步预取与计算流水线严丝合缝重叠。"
+        ];
+
+        let activeBlocks = []; // { lane, s, e, kind, label }
+
+        function buildSchedule(v, pTok) {
+          const blocks = [];
+          const prefillTotalMs = 18 + ((pTok - 1024) / 3072) * 34; // 18ms .. 52ms depending on prompt length
+
+          if (v === 0) {
+            // v1.1: Static batching — padding bubble on lane 0, then giant monolithic prefill stalls everything, wide launch gaps
+            blocks.push(
+              { lane: 0, s: 2, e: 26, kind: "decode", label: "Batch #1 吐字" },
+              { lane: 0, s: 26, e: 44, kind: "bubble", label: "短序列干等 Padding 气泡" },
+              { lane: 0, s: 47, e: 47 + prefillTotalMs, kind: "bubble", label: "被长 Prefill 阻塞停摆" },
+              { lane: 0, s: 50 + prefillTotalMs, e: 116, kind: "decode", label: "恢复吐字" },
+
+              { lane: 1, s: 2, e: 44, kind: "decode", label: "长序列慢速对齐" },
+              { lane: 1, s: 47, e: 47 + prefillTotalMs, kind: "prefill", label: `独占长 Prefill (${pTok} tok)` },
+              { lane: 1, s: 50 + prefillTotalMs, e: 116, kind: "decode", label: "Batch #2 吐字" },
+
+              { lane: 2, s: 0, e: 120, kind: "bubble", label: "同步串行访存 / 频繁 Kernel Launch 间隙" }
+            );
+          } else if (v === 1) {
+            // v1.2: Continuous batching eliminates padding bubble on lane 0 (0..44), but monolithic prefill still blocks at 46..
+            blocks.push(
+              { lane: 0, s: 2, e: 23, kind: "decode", label: "会话 A 完结" },
+              { lane: 0, s: 25, e: 44, kind: "decode", label: "新会话无缝插空!" },
+              { lane: 0, s: 46, e: 46 + prefillTotalMs * 0.9, kind: "bubble", label: "仍被整块 Prefill 抢占阻塞" },
+              { lane: 0, s: 48 + prefillTotalMs * 0.9, e: 117, kind: "decode", label: "恢复连续吐字" },
+
+              { lane: 1, s: 2, e: 44, kind: "decode", label: "存量会话持续吐字" },
+              { lane: 1, s: 46, e: 46 + prefillTotalMs * 0.9, kind: "prefill", label: `整块长 Prefill (${pTok} tok)` },
+              { lane: 1, s: 48 + prefillTotalMs * 0.9, e: 117, kind: "decode", label: "转为流式吐字" },
+
+              { lane: 2, s: 4, e: 42, kind: "hbm", label: "Paged KV 按需分页分配" },
+              { lane: 2, s: 45, e: 118, kind: "bubble", label: "步间仍存在 Python/CPU 下发间隙" }
+            );
+          } else if (v === 2) {
+            // v1.3: Chunked Prefill slices prefill into 4 chunks interleaved with Decode, leaving small CPU launch gaps (3.5ms) between ticks
+            const nSlices = 4;
+            const sliceW = clamp((prefillTotalMs * 0.85) / nSlices, 6, 13);
+            let t = 3;
+            for (let k = 0; k < 6; k++) {
+              const hasChunk = k >= 1 && k <= 4;
+              const dur = hasChunk ? sliceW + 5 : 12;
+              blocks.push({ lane: 0, s: t, e: t + dur, kind: "decode", label: `平稳吐字 #${k + 1}` });
+              if (hasChunk) {
+                blocks.push({ lane: 1, s: t, e: t + dur, kind: "prefill", label: `C${"₁₂₃₄"[k - 1]}` });
+              } else {
+                blocks.push({ lane: 1, s: t, e: t + dur, kind: "decode", label: k === 0 ? "存量吐字" : "Req-A 吐字" });
+              }
+              if (t + dur < 116) {
+                blocks.push({ lane: 2, s: t + dur, e: Math.min(118, t + dur + 3.6), kind: "bubble", label: "Launch 间隙" });
+              }
+              t += dur + 3.6;
+              if (t > 114) break;
+            }
+          } else {
+            // v1.4: CUDA Graph + Kernel Fusion snaps launch gaps to near-zero (0.3ms), continuous overlapped HBM prefetch!
+            const sliceW = clamp((prefillTotalMs * 0.72) / 4, 5.5, 11.5);
+            let t = 1;
+            let k = 0;
+            while (t < 116) {
+              const hasChunk = k >= 1 && k <= 4;
+              const dur = Math.min(119 - t, hasChunk ? sliceW + 4.5 : 12.5);
+              if (dur < 4) break;
+              blocks.push({ lane: 0, s: t, e: t + dur - 0.5, kind: "decode", label: `吐字 #${k + 1}` });
+              blocks.push({
+                lane: 1, s: t, e: t + dur - 0.5,
+                kind: hasChunk ? "prefill" : "decode",
+                label: hasChunk ? `C${"₁₂₃₄"[k - 1]}` : "融合吐字"
+              });
+              t += dur;
+              k += 1;
+            }
+            blocks.push({
+              lane: 2, s: 1, e: Math.min(118.5, t - 0.5),
+              kind: "hbm",
+              label: "CUDA Graph 整图捕获下发 / HBM 异步预取与算子流水线全程零间隙重叠"
+            });
+          }
+          return blocks;
+        }
+
+        function updateView() {
+          promptTokens = Number(promptSlider.value);
+          promptVal.textContent = `${promptTokens} tok`;
+
+          verCards.forEach((c, idx) => c.classList.toggle("active", idx === verIdx));
+          cap.innerHTML = VER_DESC[verIdx];
+
+          // Compute realistic metrics responsive to both Version & Prompt Length!
+          const lenFactor = (promptTokens - 1024) / 3072; // 0..1
+          const smBase = [46, 65, 80, 92][verIdx] - Math.round(lenFactor * [8, 5, 2, 1][verIdx]);
+          const tpsBase = Math.round([2140, 3290, 4120, 4860][verIdx] * (1 - lenFactor * [0.16, 0.1, 0.04, 0.02][verIdx]));
+          const tpotBase = ([54, 42, 17.5, 13.8][verIdx] + lenFactor * [38, 29, 3.2, 1.4][verIdx]).toFixed(1);
+
+          mSm.textContent = `${smBase}%`;
+          dSm.textContent = verIdx === 0 ? "基线" : `+${smBase - (46 - Math.round(lenFactor * 8))}pt`;
+          mTps.textContent = `${tpsBase.toLocaleString()} tok/s`;
+          mTpot.textContent = `${tpotBase} ms`;
+
+          activeBlocks = buildSchedule(verIdx, promptTokens);
+          gBlocks.innerHTML = "";
+          const LANE_Y = [47, 113, 179];
+          const LANE_H = [38, 38, 28];
+
+          activeBlocks.forEach(b => {
+            const x = X0 + (b.s / MAX_MS) * W;
+            const w = Math.max(3, ((b.e - b.s) / MAX_MS) * W);
+            const y = LANE_Y[b.lane], h = LANE_H[b.lane];
+
+            let fill = "#EDE9FE", stroke = "#6D28D9", txtCol = "#4C1D95";
+            if (b.kind === "prefill") { fill = "#DBEAFE"; stroke = "#1D4ED8"; txtCol = "#1E3A8A"; }
+            else if (b.kind === "hbm") { fill = "#CCFBF1"; stroke = "#0F766E"; txtCol = "#115E59"; }
+            else if (b.kind === "bubble") { fill = "url(#bubble-hatch)"; stroke = "#94A3B8"; txtCol = "#475569"; }
+
+            const g = el("g", {}, gBlocks);
+            el("rect", { x: f1(x), y, width: f1(w), height: h, rx: 4, fill, stroke, "stroke-width": "1.2" }, g);
+            const estTextW = [...b.label].reduce((acc, ch) => acc + (ch.charCodeAt(0) > 127 ? 10.5 : 6.2), 10);
+            if (w >= estTextW) {
+              const t = el("text", {
+                x: f1(x + w / 2), y: y + h / 2 + 0.5,
+                "text-anchor": "middle", "dominant-baseline": "central",
+                "font-size": w < 72 ? "9.5" : "10.5", "font-weight": "600", fill: txtCol
+              }, g);
+              t.textContent = b.label;
+            }
+          });
+
+          renderCursor();
+        }
+
+        function renderCursor() {
+          const x = X0 + (curMs / MAX_MS) * W;
+          curLine.setAttribute("x1", f1(x));
+          curLine.setAttribute("x2", f1(x));
+          curPill.setAttribute("x", f1(clamp(x - 26, X0 - 10, X0 + W - 42)));
+          curTxt.setAttribute("x", f1(clamp(x, X0 + 16, X0 + W - 16)));
+          curTxt.textContent = `${curMs.toFixed(1)}ms`;
+          readout.textContent = `${curMs.toFixed(1)} / 120ms`;
+
+          // Inspect what GPU is doing at curMs!
+          const hits = activeBlocks.filter(b => curMs >= b.s && curMs <= b.e);
+          const hasBubble = hits.some(b => b.kind === "bubble" && b.lane < 2);
+          const hasPrefill = hits.some(b => b.kind === "prefill");
+          const hasDecode = hits.some(b => b.kind === "decode");
+
+          if (hasBubble) {
+            mState.textContent = "⚠️ 槽位气泡等待中";
+            mState.style.color = "#B45309";
+          } else if (hasPrefill && hasDecode) {
+            mState.textContent = "⚡ Prefill+Decode 混跑满载";
+            mState.style.color = "#047857";
+          } else if (hasPrefill) {
+            mState.textContent = "🔵 独占执行长 Prefill";
+            mState.style.color = "#1D4ED8";
+          } else if (hasDecode) {
+            mState.textContent = "🟣 批量 Decode 吐字中";
+            mState.style.color = "#6D28D9";
+          } else {
+            mState.textContent = "⏳ CPU Launch 间隙";
+            mState.style.color = "#64748B";
+          }
+        }
+
+        // Direct drag on SVG timeline too!
+        const svgIter = document.getElementById("svg-iter");
+        let draggingSvg = false;
+        const moveFromPtr = e => {
+          const rect = svgIter.getBoundingClientRect();
+          const sx = ((e.clientX - rect.left) / rect.width) * 820;
+          curMs = clamp(((sx - X0) / W) * MAX_MS, 0, MAX_MS);
+          scrub.value = String(Math.round(curMs * 10));
+          playing = false;
+          btnPlay.textContent = "▶ 播放扫描";
+          renderCursor();
+        };
+        svgIter.addEventListener("pointerdown", e => { draggingSvg = true; moveFromPtr(e); });
+        window.addEventListener("pointermove", e => { if (draggingSvg) moveFromPtr(e); });
+        window.addEventListener("pointerup", () => { draggingSvg = false; });
+
+        verCards.forEach(c => {
+          c.addEventListener("click", () => {
+            verIdx = Number(c.dataset.v);
+            updateView();
+          });
+        });
+
+        btnPrev.addEventListener("click", () => {
+          verIdx = (verIdx + 3) % 4;
+          updateView();
+        });
+        btnNext.addEventListener("click", () => {
+          verIdx = (verIdx + 1) % 4;
+          updateView();
+        });
+        btnPlay.addEventListener("click", () => {
+          playing = !playing;
+          btnPlay.textContent = playing ? "⏸ 暂停扫描" : "▶ 播放扫描";
+        });
+
+        scrub.addEventListener("input", () => {
+          curMs = Number(scrub.value) / 10;
+          playing = false;
+          btnPlay.textContent = "▶ 播放扫描";
+          renderCursor();
+        });
+        promptSlider.addEventListener("input", updateView);
+
+        spdBtns.forEach(b => {
+          b.addEventListener("click", () => {
+            spdBtns.forEach(x => x.classList.remove("active"));
+            b.classList.add("active");
+            speed = Number(b.dataset.spd);
+          });
+        });
+
+        let prev = performance.now();
+        function loop(now) {
+          const dt = Math.min(0.05, (now - prev) / 1000);
+          prev = now;
+          if (playing && !draggingSvg) {
+            // Calm slow scan: 14ms of GPU time per 1 real second at 1.0x (7ms/s at 0.5x!)
+            curMs = (curMs + dt * 14 * speed) % MAX_MS;
+            scrub.value = String(Math.round(curMs * 10));
+            renderCursor();
+          }
+          requestAnimationFrame(loop);
+        }
+
+        updateView();
+        requestAnimationFrame(loop);
+      })();
+
+      const figs = [...document.querySelectorAll(".story-fig")];
+      let lockedW = 0;
+      function lockAllFigs() {
+        const w = Math.round(window.innerWidth);
+        if (Math.abs(w - lockedW) <= 1) return;
+        lockedW = w;
+        figs.forEach(fig => {
+          fig.style.height = "auto";
+          fig.style.height = `${fig.offsetHeight}px`;
+        });
+      }
+      window.addEventListener("resize", lockAllFigs);
+      lockAllFigs();
+    })();
+  </script>
+</body>
+</html>

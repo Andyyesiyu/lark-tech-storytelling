@@ -1,0 +1,1256 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="use-iframe" content="true">
+  <meta name="html-box-height-mode" content="auto">
+  <title>正交并发状态域与层级父子折叠示例 — lark-tech-storytelling</title>
+  <style>
+    :root {
+      --page-wrap: #F3F4F6;
+      --bg: #FFFFFF;
+      --subtle: #F8FAFC;
+      --ink: #0F172A;
+      --ink-2: #334155;
+      --muted: #64748B;
+      --faint: #94A3B8;
+      --hairline: #E2E8F0;
+      --border-strong: #CBD5E1;
+
+      --blue: #1D4ED8;
+      --blue-fill: #DBEAFE;
+      --blue-soft: #EFF6FF;
+
+      --teal: #0F766E;
+      --teal-fill: #CCFBF1;
+      --teal-soft: #F0FDFA;
+
+      --violet: #6D28D9;
+      --violet-fill: #EDE9FE;
+      --violet-soft: #F5F3FF;
+
+      --amber: #B45309;
+      --amber-fill: #FEF3C7;
+      --amber-soft: #FFFBEB;
+
+      --red: #DC2626;
+      --red-fill: #FEE2E2;
+      --red-soft: #FEF2F2;
+
+      --sans: -apple-system, BlinkMacSystemFont, "Inter", "PingFang SC", "Noto Sans SC", "Hiragino Sans GB", sans-serif;
+      --mono: "SF Mono", "JetBrains Mono", Menlo, Monaco, Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--page-wrap);
+      color: var(--ink);
+      font-family: var(--sans);
+      line-height: 1.75;
+      padding: 28px 16px 64px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .lark-page {
+      max-width: 880px;
+      margin: 0 auto;
+      background: var(--bg);
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05), 0 14px 36px rgba(15, 23, 42, 0.04);
+      padding: 46px 54px 60px;
+    }
+    @media (max-width: 680px) {
+      .lark-page { padding: 28px 20px 42px; }
+    }
+
+    h1.doc-title {
+      font-size: 27px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.32;
+      margin-bottom: 16px;
+      color: var(--ink);
+    }
+
+    .doc-lead {
+      border-left: 3px solid var(--ink);
+      padding: 4px 0 4px 16px;
+      margin-bottom: 28px;
+      color: var(--ink-2);
+      font-size: 14.8px;
+    }
+    .doc-lead p + p { margin-top: 6px; }
+
+    h2.sec-title {
+      font-size: 19.5px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      margin: 34px 0 12px;
+      color: var(--ink);
+    }
+
+    p.prose {
+      font-size: 15.5px;
+      color: var(--ink-2);
+      margin: 10px 0;
+    }
+    p.prose b { color: var(--ink); font-weight: 600; }
+
+    .cue-blue { background: var(--blue-soft); color: var(--blue); padding: 1px 6px; border-radius: 4px; font-weight: 500; font-size: 0.94em; }
+    .cue-violet { background: var(--violet-soft); color: var(--violet); padding: 1px 6px; border-radius: 4px; font-weight: 500; font-size: 0.94em; }
+    .cue-teal { background: var(--teal-soft); color: var(--teal); padding: 1px 6px; border-radius: 4px; font-weight: 500; font-size: 0.94em; }
+    .cue-red { background: var(--red-soft); color: var(--red); padding: 1px 6px; border-radius: 4px; font-weight: 500; font-size: 0.94em; }
+    .hl-warm { background: #FEF3C7; padding: 1px 5px; border-radius: 3px; color: var(--ink); font-weight: 500; }
+
+    /* =========================================================================
+       Distill 纯白无界画布 + 正交泳道 + 恒定锁高
+       ========================================================================= */
+    .story-fig {
+      margin: 22px 0 30px;
+      padding: 18px 0 16px;
+      border-top: 1px solid var(--hairline);
+      border-bottom: 1px solid var(--hairline);
+      background: #FFFFFF;
+      overflow: hidden;
+    }
+
+    .sf-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .sf-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .sf-tag {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--violet);
+      background: var(--violet-soft);
+      border: 1px solid rgba(109, 40, 217, 0.22);
+      padding: 2px 7px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+    .sf-title {
+      font-size: 14.5px;
+      font-weight: 600;
+      color: var(--ink);
+    }
+
+    .mode-switch {
+      display: inline-flex;
+      background: #F1F5F9;
+      padding: 3px;
+      border-radius: 8px;
+      gap: 4px;
+      flex-wrap: nowrap;
+    }
+    .mode-btn {
+      appearance: none;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font-family: var(--sans);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 5px 11px;
+      border-radius: 6px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+    .mode-btn:hover { color: var(--ink); }
+    .mode-btn.active {
+      background: #FFFFFF;
+      color: var(--ink);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+    }
+
+    /* 遥测组合态条 + 回执延迟微调滑块 */
+    .telemetry-strip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      background: var(--subtle);
+      border: 1px solid var(--hairline);
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin-bottom: 10px;
+      min-height: 44px;
+    }
+    .tele-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+    .tele-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .tele-item code {
+      font-family: var(--mono);
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--ink);
+      background: #FFFFFF;
+      border: 1px solid var(--hairline);
+      padding: 2px 7px;
+      border-radius: 5px;
+      min-width: 170px;
+      display: inline-block;
+      text-align: center;
+    }
+    .tele-pill {
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 5px;
+      min-width: 96px;
+      text-align: center;
+      display: inline-block;
+    }
+    .tele-pill.ok { color: var(--teal); background: var(--teal-soft); border: 1px solid rgba(15, 118, 110, 0.25); }
+    .tele-pill.fail { color: var(--red); background: var(--red-soft); border: 1px solid rgba(220, 38, 38, 0.35); }
+    .tele-pill.warn { color: var(--amber); background: var(--amber-soft); border: 1px solid rgba(180, 83, 9, 0.3); }
+
+    .tele-slider {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--ink-2);
+      white-space: nowrap;
+    }
+    .tele-slider input[type="range"] {
+      width: 94px;
+      accent-color: var(--violet);
+      cursor: pointer;
+    }
+    .tele-slider code {
+      font-family: var(--mono);
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--violet);
+      min-width: 52px;
+    }
+
+    .sf-canvas {
+      width: 100%;
+      background: #FFFFFF;
+      overflow: hidden;
+    }
+    .sf-canvas.ratio-regions { aspect-ratio: 820 / 332; }
+    .sf-canvas.ratio-hier { aspect-ratio: 820 / 276; }
+    .sf-canvas svg {
+      display: block;
+      width: 100%;
+      height: auto;
+      user-select: none;
+    }
+    .sf-canvas svg.spotlight [data-group] {
+      opacity: 0.22 !important;
+      transition: opacity 0.16s ease;
+    }
+    .sf-canvas svg.spotlight [data-group].lit {
+      opacity: 1 !important;
+    }
+
+    .transport-bar {
+      margin-top: 10px;
+      background: var(--subtle);
+      border: 1px solid var(--hairline);
+      border-radius: 10px;
+      padding: 9px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .tb-main {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .tb-btns { display: inline-flex; align-items: center; gap: 4px; flex: none; }
+    .tp-btn {
+      appearance: none;
+      border: 1px solid var(--border-strong);
+      background: #FFFFFF;
+      color: var(--ink);
+      height: 28px;
+      padding: 0 9px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: var(--sans);
+      white-space: nowrap;
+    }
+    .tp-btn:hover { border-color: var(--ink); background: #F1F5F9; }
+    .tp-btn.primary { background: var(--ink); border-color: var(--ink); color: #FFFFFF; min-width: 72px; }
+    .tp-range {
+      flex: 1;
+      min-width: 130px;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 5px;
+      border-radius: 999px;
+      background: #CBD5E1;
+      outline: none;
+      cursor: pointer;
+    }
+    .tp-range::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--ink);
+      border: 2px solid #FFFFFF;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.3);
+      cursor: grab;
+    }
+    .tp-clock {
+      font-family: var(--mono);
+      font-size: 11.5px;
+      color: var(--muted);
+      min-width: 64px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    .tp-speed {
+      display: inline-flex;
+      background: #E2E8F0;
+      padding: 2px;
+      border-radius: 6px;
+      gap: 2px;
+      flex: none;
+    }
+    .tp-speed button {
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 7px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .tp-speed button.active { background: #FFFFFF; color: var(--ink); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08); }
+
+    .tb-sub {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      min-height: 26px;
+      overflow: hidden;
+    }
+    .step-pills {
+      display: flex;
+      gap: 6px;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .step-pills::-webkit-scrollbar { display: none; }
+    .ms-pill {
+      appearance: none;
+      border: 1px solid var(--hairline);
+      background: #FFFFFF;
+      color: var(--muted);
+      font-family: var(--sans);
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+      white-space: nowrap;
+      flex: none;
+    }
+    .ms-pill:hover { border-color: var(--ink-2); color: var(--ink); }
+    .ms-pill.active { background: var(--ink); border-color: var(--ink); color: #FFFFFF; }
+    .ms-pill.is-break.active { background: var(--red); border-color: var(--red); color: #FFFFFF; }
+
+    .sf-caption {
+      margin-top: 9px;
+      font-size: 13px;
+      color: var(--ink-2);
+      line-height: 22px;
+      height: 44px;
+      overflow: hidden;
+    }
+    .sf-caption b { color: var(--ink); font-weight: 600; }
+
+    .summary-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 14px;
+      font-size: 13.8px;
+    }
+    .summary-table th {
+      text-align: left;
+      padding: 9px 12px;
+      border-bottom: 1.5px solid var(--border-strong);
+      color: var(--ink);
+      font-weight: 600;
+      background: var(--subtle);
+    }
+    .summary-table td {
+      padding: 9px 12px;
+      border-bottom: 1px solid var(--hairline);
+      color: var(--ink-2);
+      vertical-align: top;
+    }
+  </style>
+</head>
+<body>
+  <!--
+    参考说明：本文件用于展示「飞书正文 + 正交并发状态域与层级父状态图」的完整文图呼应效果；
+    实际为飞书 <html5-block> 生成单个独立 HTML 图表时，请参考 ../interactive-svg-template.html 只输出纯白无界图表容器，不要外包 .lark-page 模拟页框。
+  -->
+  <article class="lark-page">
+    <h1 class="doc-title">并发状态不再画成蜘蛛网：正交状态域与父子包裹母题</h1>
+
+    <div class="doc-lead">
+      <p><b>核心痛点</b>：当系统同时存在“会话轮次控制”、“人工审批门禁”与“外部沙箱执行”三个并发模块时，如果强行把它们乘在一起画成单张状态图，节点数会立刻爆炸成几十个。</p>
+      <p><b>空间同构解法</b>：把三条独立状态机摆成上下平行的<b>正交状态域（Parallel Regions）</b>，用纵向切片光带观测“哪三个状态凑在一起会撞破契约”，再用<b>层级父状态（Parent State）</b>一个外框收敛全部散装取消连线。</p>
+    </div>
+
+    <!-- ==================== 第一节 ==================== -->
+    <h2 class="sec-title">1. 三域正交泳道：用纵向切片揪出“非法组合态”</h2>
+
+    <p class="prose">
+      并发 Bug 往往不是某一个子系统画错了，而是三个子系统各自推进后，在某一拍凑出了非法的组合态。下方把<span class="cue-blue">会话控制域</span>、<span class="cue-violet">审批门禁域</span>与<span class="cue-teal">沙箱执行域</span>平行铺开——你可以观察 <b>沙箱执行域</b> 的迟到回执如何在第 3 拍跨泳道注入 <b>会话控制域</b>，也可以拖动右侧 <b>工具回执延迟</b> 滑块观察竞态窗口如何被拉宽：
+    </p>
+
+    <!-- ==================== 图 1：正交状态域泳道 ==================== -->
+    <section class="story-fig" id="fig-v2-regions">
+      <div class="sf-header">
+        <div class="sf-title-wrap">
+          <span class="sf-tag">Parallel Regions / Orthogonal Lanes</span>
+          <span class="sf-title">三域并发切片与跨区 [当 ...] 守卫（悬停任意泳道或拍次高亮关联）</span>
+        </div>
+        <div class="mode-switch" id="v2r-modes">
+          <button type="button" class="mode-btn active" data-mode="0">并发交错反例 (无跨区守卫)</button>
+          <button type="button" class="mode-btn" data-mode="1">启用跨区轮次守卫 (全组合安全)</button>
+        </div>
+      </div>
+
+      <div class="telemetry-strip">
+        <div class="tele-left">
+          <span class="tele-item">当前组合态 <code id="v2r-tuple">(流式生成, 无需审批, 空闲)</code></span>
+          <span class="tele-item">单轮隔离契约 <span class="tele-pill ok" id="v2r-inv">✓ 安全组合</span></span>
+        </div>
+        <label class="tele-slider">
+          <span>工具回执延迟</span>
+          <input type="range" id="v2r-delay" min="100" max="900" step="20" value="520">
+          <code id="v2r-delay-val">520 ms</code>
+        </label>
+      </div>
+
+      <div class="sf-canvas ratio-regions">
+        <svg id="svg-v2-regions" viewBox="0 0 820 332" role="img" aria-label="三域正交并发状态泳道与跨区冲突切片图">
+          <defs>
+            <marker id="r-arr-red" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto">
+              <path d="M1 1.5 L9 5 L1 8.5 z" fill="#DC2626"/>
+            </marker>
+            <marker id="r-arr-teal" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M1 1.5 L9 5 L1 8.5 z" fill="#0F766E"/>
+            </marker>
+            <marker id="r-arr-blue" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto">
+              <path d="M1 1.5 L9 5 L1 8.5 z" fill="#94A3B8"/>
+            </marker>
+          </defs>
+
+          <!-- 纵向切片光带：随时间顺滑移动到对应 Tick 列 -->
+          <rect id="v2r-slice" x="166" y="34" width="150" height="270" rx="10" fill="#EFF6FF" stroke="#3B82F6" stroke-width="1.6" stroke-dasharray="4 3" opacity="0.72"/>
+
+          <!-- 顶栏拍次刻度 -->
+          <g font-family="var(--mono)" font-size="10.5" font-weight="700" fill="#64748B">
+            <text x="241" y="22" text-anchor="middle">Tick 0 - 请求启动</text>
+            <text x="399" y="22" text-anchor="middle">Tick 1 - 用户取消</text>
+            <text x="557" y="22" text-anchor="middle">Tick 2 - 发起新轮</text>
+            <text x="715" y="22" text-anchor="middle">Tick 3 - 迟到回执</text>
+          </g>
+
+          <!-- 三条正交域左栏标题 -->
+          <g data-group="lane-session" style="cursor:pointer">
+            <rect x="12" y="44" width="142" height="56" rx="8" fill="#EFF6FF" stroke="#BFDBFE"/>
+            <text x="24" y="65" font-size="12" font-weight="700" fill="#1E3A8A">1. 会话控制域</text>
+            <text x="24" y="84" font-size="10.5" fill="#3B82F6">主控上下文轮次</text>
+          </g>
+
+          <g data-group="lane-approval" style="cursor:pointer">
+            <rect x="12" y="130" width="142" height="56" rx="8" fill="#F5F3FF" stroke="#DDD6FE"/>
+            <text x="24" y="151" font-size="12" font-weight="700" fill="#4C1D95">2. 审批门禁域</text>
+            <text x="24" y="170" font-size="10.5" fill="#6D28D9">权限确认与重置</text>
+          </g>
+
+          <g data-group="lane-sandbox" style="cursor:pointer">
+            <rect x="12" y="222" width="142" height="56" rx="8" fill="#F0FDFA" stroke="#99F6E4"/>
+            <text x="24" y="243" font-size="12" font-weight="700" fill="#115E59">3. 沙箱执行域</text>
+            <text x="24" y="262" font-size="10.5" fill="#0F766E">异步子进程生命周期</text>
+          </g>
+
+          <!-- 泳道横向静态节点 + 跨区连线（模式或延迟变化时重建，播放期间零重建） -->
+          <g id="v2r-cells"></g>
+          <g id="v2r-cross-wires"></g>
+
+          <!-- 延迟窗口可视化指示条（随滑块动态缩放） -->
+          <g transform="translate(16 308)" pointer-events="none">
+            <text x="0" y="9" font-size="10.5" font-weight="600" fill="#64748B">异步回执竞态窗口：</text>
+            <rect x="120" y="1" width="286" height="8" rx="4" fill="#F1F5F9" stroke="#E2E8F0"/>
+            <rect id="v2r-win-bar" x="120" y="1" width="160" height="8" rx="4" fill="#DC2626"/>
+            <text id="v2r-win-txt" x="418" y="9" font-family="var(--mono)" font-size="10" font-weight="600" fill="#DC2626">延迟 520ms -> 跨入下一轮推理窗口</text>
+          </g>
+        </svg>
+      </div>
+
+      <div class="transport-bar">
+        <div class="tb-main">
+          <div class="tb-btns">
+            <button type="button" class="tp-btn" id="v2r-prev">◀ 上一步</button>
+            <button type="button" class="tp-btn primary" id="v2r-play">⏸ 暂停</button>
+            <button type="button" class="tp-btn" id="v2r-next">下一步 ▶</button>
+          </div>
+          <input type="range" class="tp-range" id="v2r-scrub" min="0" max="1000" value="0" aria-label="正交切片时间轴">
+          <span class="tp-clock" id="v2r-clock">0.0s / 16s</span>
+          <div class="tp-speed" id="v2r-speed">
+            <button type="button" data-sp="0.5">0.5×</button>
+            <button type="button" data-sp="1" class="active">1.0×</button>
+            <button type="button" data-sp="1.5">1.5×</button>
+          </div>
+        </div>
+        <div class="tb-sub">
+          <div class="step-pills" id="v2r-pills"></div>
+        </div>
+      </div>
+
+      <p class="sf-caption" id="v2r-caption"></p>
+    </section>
+
+    <!-- ==================== 第二节 ==================== -->
+    <h2 class="sec-title">2. 层级复合父状态：用一个外框消灭 9 条交叉取消边与漏边死锁</h2>
+
+    <p class="prose">
+      正交泳道理清了并行关系，但在单个域内部，我们常需要画“流式生成 → 高危待批 → 沙箱运行 → 审批超时”。如果每个子状态都要单独拉一根取消箭头出去，不仅图面瞬间变成蜘蛛网，工程师还极易在“审批超时”这类边缘子态上漏画一根线，留下<span class="cue-red">NoDeadlock 死锁孤岛</span>。
+    </p>
+    <p class="prose">
+      在 Statechart 中，解决这个问题的几何母题叫<b>层级父状态包裹（Parent State Envelope）</b>：把共享同一种中断逻辑的子状态放进同一个<span class="cue-teal">父状态外框</span>里，只需在父框边缘画<b>唯一一根统一退出箭头</b>——无论当前停在哪个子态，一旦触发取消或全局超时，一律统一收口，既省掉 70% 连线，又从结构上杜绝漏边：
+    </p>
+
+    <!-- ==================== 图 2：层级父状态包裹折叠 ==================== -->
+    <section class="story-fig" id="fig-v2-hierarchy">
+      <div class="sf-header">
+        <div class="sf-title-wrap">
+          <span class="sf-tag">Parent State Envelope / Spatial Fold</span>
+          <span class="sf-title">从扁平交叉连线到父状态统一收口（悬停对比连线归属）</span>
+        </div>
+        <div class="mode-switch" id="v2h-modes">
+          <button type="button" class="mode-btn" data-mode="0">扁平散装连线 (多边交叉 / 易漏边)</button>
+          <button type="button" class="mode-btn active" data-mode="1">层级父状态包裹 (统一出口 / 零死锁)</button>
+        </div>
+      </div>
+
+      <div class="sf-canvas ratio-hier">
+        <svg id="svg-v2-hier" viewBox="0 0 820 276" role="img" aria-label="层级父状态包裹消除交叉连线与死锁图">
+          <defs>
+            <marker id="h-arr-muted" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto">
+              <path d="M1 1.5 L9 5 L1 8.5 z" fill="#94A3B8"/>
+            </marker>
+            <marker id="h-arr-red" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto">
+              <path d="M1 1.5 L9 5 L1 8.5 z" fill="#DC2626"/>
+            </marker>
+            <marker id="h-arr-teal" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto">
+              <path d="M1 1.5 L9 5 L1 8.5 z" fill="#0F766E"/>
+            </marker>
+            <marker id="h-arr-blue" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M1 1.5 L9 5 L1 8.5 z" fill="#1D4ED8"/>
+            </marker>
+          </defs>
+          <g id="v2h-stage"></g>
+          <circle id="v2h-bead" r="5" fill="#0F766E" stroke="#FFFFFF" stroke-width="2" visibility="hidden" pointer-events="none"/>
+        </svg>
+      </div>
+
+      <div class="transport-bar">
+        <div class="tb-main">
+          <div class="tb-btns">
+            <button type="button" class="tp-btn" id="v2h-prev">◀ 上一步</button>
+            <button type="button" class="tp-btn primary" id="v2h-play">▶ 播放</button>
+            <button type="button" class="tp-btn" id="v2h-next">下一步 ▶</button>
+          </div>
+          <input type="range" class="tp-range" id="v2h-scrub" min="0" max="1000" value="0" aria-label="层级包裹演示轴">
+          <span class="tp-clock" id="v2h-clock">0.0s / 14s</span>
+          <div class="tp-speed" id="v2h-speed">
+            <button type="button" data-sp="0.5">0.5×</button>
+            <button type="button" data-sp="1" class="active">1.0×</button>
+            <button type="button" data-sp="1.5">1.5×</button>
+          </div>
+        </div>
+        <div class="tb-sub">
+          <div class="step-pills" id="v2h-pills"></div>
+        </div>
+      </div>
+
+      <p class="sf-caption" id="v2h-caption"></p>
+    </section>
+
+    <!-- ==================== 第三节：多域并发隔离与层级收口清单 ==================== -->
+    <h2 class="sec-title">3. 多域并发隔离与层级收口清单</h2>
+
+    <table class="summary-table">
+      <colgroup>
+        <col width="170"/>
+        <col width="280"/>
+        <col width="320"/>
+      </colgroup>
+      <thead>
+        <tr>
+          <th>并发与层级机制</th>
+          <th>拦截的典型竞态或漏边故障</th>
+          <th>在状态流转图中的收口表现</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>正交状态域切片</b></td>
+          <td>会话进入轮次 #2 时，沙箱域仍滞留轮次 #1 进程并在延迟窗口期投递回执，凑出非法三域组合态。</td>
+          <td>通过 <code>[当 会话域 == 当前轮次]</code> 跨区守卫拦截滞后回执，将孤儿帧直接导流至安全丢弃态。</td>
+        </tr>
+        <tr>
+          <td><b>层级父状态外框</b></td>
+          <td>新增「审批超时作废」等边缘分支后，遗漏连向「取消排空」的退出转移边，引发局部 0 出边死锁。</td>
+          <td>将活跃子态统一装入父状态外框，由外框边缘唯一出口承接用户取消与全局超时事件。</td>
+        </tr>
+        <tr>
+          <td><b>异步窗口延迟评估</b></td>
+          <td>固定超短时延测试掩盖问题，一旦线上沙箱延迟拉长至 500ms 以上即跨入下一轮边界。</td>
+          <td>配合延迟参数滑块评估边界，确认跨区轮次守卫启用后任意时延均保持组合态安全。</td>
+        </tr>
+      </tbody>
+    </table>
+  </article>
+
+  <script>
+    (() => {
+      const NS = "http://www.w3.org/2000/svg";
+      const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+      const lerp = (a, b, u) => a + (b - a) * u;
+      const f1 = n => n.toFixed(1);
+
+      function el(tag, attrs = {}, parent = null) {
+        const node = document.createElementNS(NS, tag);
+        for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+        if (parent) parent.appendChild(node);
+        return node;
+      }
+
+      function attachSpotlight(svgEl) {
+        let hovered = null;
+        const sync = () => {
+          svgEl.classList.toggle("spotlight", !!hovered);
+          svgEl.querySelectorAll("[data-group]").forEach(n => {
+            n.classList.toggle("lit", n.getAttribute("data-group") === hovered);
+          });
+        };
+        svgEl.addEventListener("pointermove", e => {
+          const hit = e.target.closest && e.target.closest("[data-group]");
+          const nxt = hit ? hit.getAttribute("data-group") : null;
+          if (nxt !== hovered) { hovered = nxt; sync(); }
+        });
+        svgEl.addEventListener("pointerleave", () => {
+          if (hovered !== null) { hovered = null; sync(); }
+        });
+      }
+
+      /* =========================================================================
+         图 1：三域正交并发泳道
+         ========================================================================= */
+      (function initRegions() {
+        const svg = document.getElementById("svg-v2-regions");
+        const slice = document.getElementById("v2r-slice");
+        const gCells = document.getElementById("v2r-cells");
+        const gWires = document.getElementById("v2r-cross-wires");
+        const winBar = document.getElementById("v2r-win-bar");
+        const winTxt = document.getElementById("v2r-win-txt");
+
+        const tupleEl = document.getElementById("v2r-tuple");
+        const invEl = document.getElementById("v2r-inv");
+        const delaySlider = document.getElementById("v2r-delay");
+        const delayVal = document.getElementById("v2r-delay-val");
+
+        const modeBtns = [...document.querySelectorAll("#v2r-modes .mode-btn")];
+        const btnPrev = document.getElementById("v2r-prev");
+        const btnPlay = document.getElementById("v2r-play");
+        const btnNext = document.getElementById("v2r-next");
+        const scrub = document.getElementById("v2r-scrub");
+        const clock = document.getElementById("v2r-clock");
+        const pillsWrap = document.getElementById("v2r-pills");
+        const caption = document.getElementById("v2r-caption");
+        const speedBtns = [...document.querySelectorAll("#v2r-speed button")];
+
+        attachSpotlight(svg);
+
+        const COL_X = [172, 330, 488, 646];
+        const CELL_W = 138;
+        const LANE_Y = [46, 132, 224];
+        const CELL_H = 52;
+
+        const DATA = [
+          // Mode 0: unguarded race
+          {
+            cycleSec: 16,
+            lanes: [
+              {
+                grp: "lane-session",
+                cells: [
+                  { title: "首轮执行中", sub: "轮次 #1 活跃", bg: "#EFF6FF", stroke: "#3B82F6", col: "#1E3A8A" },
+                  { title: "取消排空中", sub: "界面停止输出", bg: "#F5F3FF", stroke: "#7C3AED", col: "#4C1D95" },
+                  { title: "新一轮推理中", sub: "轮次 #2 启动", bg: "#EFF6FF", stroke: "#1D4ED8", col: "#1E3A8A" },
+                  { title: "上下文被串写", sub: "✕ breaks 单轮隔离", bg: "#FEE2E2", stroke: "#DC2626", col: "#991B1B" }
+                ]
+              },
+              {
+                grp: "lane-approval",
+                cells: [
+                  { title: "高危工具已批准", sub: "签发执行令牌", bg: "#F5F3FF", stroke: "#6D28D9", col: "#4C1D95" },
+                  { title: "门禁立即重置", sub: "回退待命态", bg: "#F8FAFC", stroke: "#94A3B8", col: "#334155" },
+                  { title: "门禁空闲", sub: "等待新请求", bg: "#F8FAFC", stroke: "#94A3B8", col: "#334155" },
+                  { title: "未拦截旧回报", sub: "审批域已脱离", bg: "#FFFBEB", stroke: "#B45309", col: "#92400E" }
+                ]
+              },
+              {
+                grp: "lane-sandbox",
+                cells: [
+                  { title: "工具 A 运行中", sub: "携带轮次 #1", bg: "#F0FDFA", stroke: "#0F766E", col: "#115E59" },
+                  { title: "未收停仍在跑", sub: "迟到回执在途", bg: "#FFFBEB", stroke: "#B45309", col: "#92400E" },
+                  { title: "计算完成排队", sub: "延迟回包出队", bg: "#FFFBEB", stroke: "#B45309", col: "#92400E" },
+                  { title: "跨区投递回执", sub: "注入会话域", bg: "#FEE2E2", stroke: "#DC2626", col: "#991B1B" }
+                ]
+              }
+            ],
+            milestones: [
+              { t: 0.12, tick: 0, tuple: "(首轮执行, 已批准, 工具A运行)", invCls: "ok", invTxt: "✓ 安全组合", pillCls: "", label: "Tick 0: 首轮调用", cap: "<b>Tick 0 - 正常推进：</b>三域处于合法同步态，沙箱开始运行轮次 #1 的工具 A。" },
+              { t: 0.38, tick: 1, tuple: "(取消排空, 已重置, 仍在跑)", invCls: "warn", invTxt: "⚠ 脱钩潜伏", pillCls: "", label: "Tick 1: 用户点取消", cap: "<b>Tick 1 - 门禁先复位：</b>会话与审批域响应了取消，但沙箱域的异步子进程没有立即停机。" },
+              { t: 0.65, tick: 2, tuple: "(新一轮#2, 门禁空闲, 延迟排队)", invCls: "warn", invTxt: "⚠ 跨轮重叠", pillCls: "", label: "Tick 2: 开启新一轮", cap: "<b>Tick 2 - 交错埋雷：</b>会话域迈入轮次 #2，而沙箱域里轮次 #1 的回执仍在网络延迟窗口中滑行。" },
+              { t: 0.90, tick: 3, tuple: "(串写破缺, 未拦截, 投递回执)", invCls: "fail", invTxt: "✕ 跨区冲突", pillCls: "is-break", label: "Tick 3: 组合态破缺", cap: "<b>Tick 3 - 跨区反例 (breaks 契约 1)：</b>沙箱域在 [当 会话域 = 新一轮#2] 时投递旧回执，三域组合撞破单轮隔离契约！" }
+            ]
+          },
+          // Mode 1: guarded cross-region check
+          {
+            cycleSec: 16,
+            lanes: [
+              {
+                grp: "lane-session",
+                cells: [
+                  { title: "首轮执行中", sub: "活跃轮次 = #1", bg: "#EFF6FF", stroke: "#3B82F6", col: "#1E3A8A" },
+                  { title: "取消排空中", sub: "轮次标记作废", bg: "#F5F3FF", stroke: "#7C3AED", col: "#4C1D95" },
+                  { title: "新一轮推理中", sub: "活跃轮次 = #2", bg: "#EFF6FF", stroke: "#1D4ED8", col: "#1E3A8A" },
+                  { title: "新轮次不受污染", sub: "✓ 契约 1 恒成立", bg: "#F0FDFA", stroke: "#0F766E", col: "#115E59" }
+                ]
+              },
+              {
+                grp: "lane-approval",
+                cells: [
+                  { title: "高危工具已批准", sub: "绑定轮次 #1", bg: "#F5F3FF", stroke: "#6D28D9", col: "#4C1D95" },
+                  { title: "门禁复位待命", sub: "清空旧授权", bg: "#F8FAFC", stroke: "#94A3B8", col: "#334155" },
+                  { title: "门禁空闲", sub: "等待轮次 #2", bg: "#F8FAFC", stroke: "#94A3B8", col: "#334155" },
+                  { title: "门禁保持干净", sub: "零串号干扰", bg: "#F0FDFA", stroke: "#0F766E", col: "#115E59" }
+                ]
+              },
+              {
+                grp: "lane-sandbox",
+                cells: [
+                  { title: "工具 A 运行中", sub: "回执绑定 #1", bg: "#F0FDFA", stroke: "#0F766E", col: "#115E59" },
+                  { title: "标记为滞后进程", sub: "保留 #1 标签", bg: "#F8FAFC", stroke: "#94A3B8", col: "#334155" },
+                  { title: "计算完成排队", sub: "准备上行投递", bg: "#F8FAFC", stroke: "#94A3B8", col: "#334155" },
+                  { title: "守卫识别并丢弃", sub: "[回执#1 != 当前#2]", bg: "#F0FDFA", stroke: "#0F766E", col: "#115E59" }
+                ]
+              }
+            ],
+            milestones: [
+              { t: 0.12, tick: 0, tuple: "(首轮#1, 绑定#1, 携带#1)", invCls: "ok", invTxt: "✓ 安全组合", pillCls: "", label: "Tick 0: 绑定轮次标签", cap: "<b>Tick 0 - 显式跨区标签：</b>审批与沙箱请求在发出时刻全部绑定当前会话轮次号 #1。" },
+              { t: 0.38, tick: 1, tuple: "(取消排空, 清授权, 滞后#1)", invCls: "ok", invTxt: "✓ 安全组合", pillCls: "", label: "Tick 1: 取消同步递增", cap: "<b>Tick 1 - 边界收紧：</b>用户点击取消时，会话域提前推进轮次水位，旧进程自然失去投递资格。" },
+              { t: 0.65, tick: 2, tuple: "(新一轮#2, 门禁空闲, 排队#1)", invCls: "ok", invTxt: "✓ 安全组合", pillCls: "", label: "Tick 2: 开启轮次 #2", cap: "<b>Tick 2 - 延迟仍存在：</b>即便网络把回执延迟到 520ms 甚至 900ms，新轮次依然安全运行。" },
+              { t: 0.90, tick: 3, tuple: "(新轮完好, 门禁干净, 丢弃孤儿)", invCls: "ok", invTxt: "✓ 守卫拦截", pillCls: "", label: "Tick 3: 跨区守卫拦截", cap: "<b>Tick 3 - 守卫闭环：</b>跨区箭头在 [当 回执轮次 != 会话活跃轮次] 时直接导向安全丢弃，全部组合态满足契约。" }
+            ]
+          }
+        ];
+
+        let modeIdx = 0;
+        let delayMs = 520;
+        let u = 0.90;
+        let playing = true;
+        let speedMul = 1.0;
+
+        function rebuild() {
+          const d = DATA[modeIdx];
+          modeBtns.forEach((b, i) => b.classList.toggle("active", i === modeIdx));
+
+          gCells.innerHTML = "";
+          gWires.innerHTML = "";
+
+          d.lanes.forEach((lane, lIdx) => {
+            const y = LANE_Y[lIdx];
+            lane.cells.forEach((c, cIdx) => {
+              const x = COL_X[cIdx];
+              const g = el("g", { "data-group": lane.grp, style: "cursor:pointer" }, gCells);
+              el("rect", {
+                x, y, width: CELL_W, height: CELL_H, rx: 8,
+                fill: c.bg, stroke: c.stroke, "stroke-width": cIdx === 3 ? "2" : "1.4"
+              }, g);
+              const t1 = el("text", {
+                x: x + CELL_W / 2, y: y + 19,
+                "text-anchor": "middle", "dominant-baseline": "central",
+                "font-size": "12", "font-weight": "700", fill: c.col
+              }, g);
+              t1.textContent = c.title;
+              const t2 = el("text", {
+                x: x + CELL_W / 2, y: y + 37,
+                "text-anchor": "middle", "dominant-baseline": "central",
+                "font-size": "10", "font-weight": "600", fill: c.col, opacity: "0.85"
+              }, g);
+              t2.textContent = c.sub;
+
+              if (cIdx < 3) {
+                el("line", {
+                  x1: x + CELL_W + 1, y1: y + CELL_H / 2,
+                  x2: COL_X[cIdx + 1] - 3, y2: y + CELL_H / 2,
+                  stroke: "#CBD5E1", "stroke-width": "1.4", "marker-end": "url(#r-arr-blue)"
+                }, gWires);
+              }
+            });
+          });
+
+          // Cross-region causal arrow at Tick 3 (Sandbox -> Session bypassing Approval)
+          const crossColor = modeIdx === 0 ? "#DC2626" : "#0F766E";
+          const crossMarker = modeIdx === 0 ? "r-arr-red" : "r-arr-teal";
+          el("path", {
+            d: "M 784 250 C 814 238, 814 86, 784 72",
+            fill: "none", stroke: crossColor, "stroke-width": "2.2",
+            "stroke-dasharray": modeIdx === 0 ? "" : "4 3",
+            "marker-end": `url(#${crossMarker})`
+          }, gWires);
+
+          const badgeTxt = modeIdx === 0 ? "[当 会话域 = 新一轮] 直接覆盖" : "[当 轮次 != 当前] 守卫丢弃";
+          el("rect", {
+            x: 616, y: 194, width: 176, height: 22, rx: 11,
+            fill: modeIdx === 0 ? "#FEF2F2" : "#F0FDFA",
+            stroke: modeIdx === 0 ? "#FCA5A5" : "#5EEAD4"
+          }, gWires);
+          const bt = el("text", {
+            x: 704, y: 205.5, "text-anchor": "middle", "dominant-baseline": "central",
+            "font-size": "10.5", "font-weight": "700", fill: crossColor
+          }, gWires);
+          bt.textContent = badgeTxt;
+
+          pillsWrap.innerHTML = "";
+          d.milestones.forEach(ms => {
+            const p = document.createElement("button");
+            p.type = "button";
+            p.className = "ms-pill " + (ms.pillCls || "");
+            p.textContent = ms.label;
+            p.addEventListener("click", () => {
+              setPlaying(false);
+              u = ms.t;
+              scrub.value = String(Math.round(u * 1000));
+              update();
+            });
+            pillsWrap.appendChild(p);
+          });
+
+          updateDelayUI();
+          update();
+        }
+
+        function updateDelayUI() {
+          delayVal.textContent = `${delayMs} ms`;
+          const ratio = (delayMs - 100) / 800;
+          const barW = Math.round(52 + ratio * 234);
+          winBar.setAttribute("width", String(barW));
+          if (modeIdx === 1) {
+            winBar.setAttribute("fill", "#0F766E");
+            winTxt.setAttribute("fill", "#0F766E");
+            winTxt.textContent = `延迟 ${delayMs}ms -> 已被跨区轮次守卫完全隔离`;
+          } else if (delayMs >= 300) {
+            winBar.setAttribute("fill", "#DC2626");
+            winTxt.setAttribute("fill", "#DC2626");
+            winTxt.textContent = `延迟 ${delayMs}ms -> 跨入下一轮推理窗口 (触发串写)`;
+          } else {
+            winBar.setAttribute("fill", "#B45309");
+            winTxt.setAttribute("fill", "#B45309");
+            winTxt.textContent = `延迟 ${delayMs}ms -> 临界排空期 (仍存偶发抢跑风险)`;
+          }
+        }
+
+        function setPlaying(on) {
+          playing = on;
+          btnPlay.textContent = on ? "⏸ 暂停" : "▶ 播放";
+        }
+
+        function activeIdx(d, prog) {
+          let idx = 0;
+          d.milestones.forEach((ms, i) => {
+            const prevMid = i === 0 ? 0 : (d.milestones[i - 1].t + ms.t) / 2;
+            if (prog >= prevMid) idx = i;
+          });
+          return idx;
+        }
+
+        function update() {
+          const d = DATA[modeIdx];
+          const idx = activeIdx(d, u);
+          const ms = d.milestones[idx];
+          [...pillsWrap.children].forEach((p, i) => p.classList.toggle("active", i === idx));
+          caption.innerHTML = ms.cap;
+          clock.textContent = `${(u * d.cycleSec).toFixed(1)}s / ${d.cycleSec}s`;
+          tupleEl.textContent = ms.tuple;
+          invEl.className = "tele-pill " + ms.invCls;
+          invEl.textContent = ms.invTxt;
+
+          // Smoothly slide vertical slice band across COL_X[0..3]
+          const smoothX = COL_X[0] - 6 + clamp(u / 0.90, 0, 1) * (COL_X[3] - COL_X[0]);
+          const snappedX = COL_X[ms.tick] - 6;
+          const x = playing ? smoothX : snappedX;
+          slice.setAttribute("x", f1(x));
+          slice.setAttribute("stroke", ms.invCls === "fail" ? "#DC2626" : (ms.invCls === "warn" ? "#B45309" : "#2563EB"));
+          slice.setAttribute("fill", ms.invCls === "fail" ? "#FEF2F2" : (ms.invCls === "warn" ? "#FFFBEB" : "#EFF6FF"));
+        }
+
+        modeBtns.forEach(b => {
+          b.addEventListener("click", () => {
+            modeIdx = Number(b.dataset.mode);
+            u = DATA[modeIdx].milestones[3].t;
+            scrub.value = String(Math.round(u * 1000));
+            setPlaying(false);
+            rebuild();
+          });
+        });
+        delaySlider.addEventListener("input", () => {
+          delayMs = Number(delaySlider.value);
+          updateDelayUI();
+        });
+        btnPlay.addEventListener("click", () => setPlaying(!playing));
+        btnPrev.addEventListener("click", () => {
+          setPlaying(false);
+          const d = DATA[modeIdx];
+          const idx = (activeIdx(d, u) + d.milestones.length - 1) % d.milestones.length;
+          u = d.milestones[idx].t;
+          scrub.value = String(Math.round(u * 1000));
+          update();
+        });
+        btnNext.addEventListener("click", () => {
+          setPlaying(false);
+          const d = DATA[modeIdx];
+          const idx = (activeIdx(d, u) + 1) % d.milestones.length;
+          u = d.milestones[idx].t;
+          scrub.value = String(Math.round(u * 1000));
+          update();
+        });
+        scrub.addEventListener("input", () => {
+          setPlaying(false);
+          u = Number(scrub.value) / 1000;
+          update();
+        });
+        speedBtns.forEach(b => {
+          b.addEventListener("click", () => {
+            speedMul = Number(b.dataset.sp);
+            speedBtns.forEach(x => x.classList.toggle("active", x === b));
+          });
+        });
+
+        let prev = performance.now();
+        function tick(now) {
+          const dt = Math.min(0.05, (now - prev) / 1000);
+          prev = now;
+          if (playing) {
+            const cycle = DATA[modeIdx].cycleSec;
+            u = (u + (dt / cycle) * speedMul) % 1;
+            scrub.value = String(Math.round(u * 1000));
+            update();
+          }
+          requestAnimationFrame(tick);
+        }
+
+        rebuild();
+        scrub.value = String(Math.round(u * 1000));
+        requestAnimationFrame(tick);
+      })();
+
+      /* =========================================================================
+         图 2：层级复合父状态包裹
+         ========================================================================= */
+      (function initHierarchy() {
+        const svg = document.getElementById("svg-v2-hier");
+        const stage = document.getElementById("v2h-stage");
+        const bead = document.getElementById("v2h-bead");
+
+        const modeBtns = [...document.querySelectorAll("#v2h-modes .mode-btn")];
+        const btnPrev = document.getElementById("v2h-prev");
+        const btnPlay = document.getElementById("v2h-play");
+        const btnNext = document.getElementById("v2h-next");
+        const scrub = document.getElementById("v2h-scrub");
+        const clock = document.getElementById("v2h-clock");
+        const pillsWrap = document.getElementById("v2h-pills");
+        const caption = document.getElementById("v2h-caption");
+        const speedBtns = [...document.querySelectorAll("#v2h-speed button")];
+
+        attachSpotlight(svg);
+
+        const MODES = [
+          // Mode 0: Flat tangled cancel edges + leaked edge deadlock
+          {
+            cycleSec: 14,
+            paths: {},
+            milestones: [
+              { t: 0.14, node: "sub-0", label: "① 扁平散装：9 条交叉边", cap: "<b>扁平画法痛点：</b>当 4 个子态各自画向“取消排空”和“超时”时，图面迅速被交叉红线切碎。" },
+              { t: 0.52, node: "sub-3", label: "② 边缘子态漏画退出边", cap: "<b>结构性隐患：</b>“审批已超时作废”往往是事后补上的分支，画图时极易忘掉从它连回“取消排空”。" },
+              { t: 0.88, node: "sub-3", label: "③ 并发撞上 NoDeadlock 死锁", cap: "<b>死锁爆发：</b>一旦任务进入漏边子态又遇到用户取消，就会在局部原地打转、永远无法回收。" }
+            ]
+          },
+          // Mode 1: Parent state envelope
+          {
+            cycleSec: 14,
+            paths: {},
+            milestones: [
+              { t: 0.14, node: "parent", label: "① 父状态外框兜住全部子态", cap: "<b>空间折叠：</b>把“流式生成 / 高危待批 / 沙箱运行 / 审批作废”统统装进“任务活跃期”大外框里。" },
+              { t: 0.52, node: "exit", label: "② 唯一统一退出弦", cap: "<b>唯一出口：</b>所有子态共享父框边缘这 1 根“用户取消 / 全局超时”箭头，图面连线减少 70%。" },
+              { t: 0.88, node: "term", label: "③ 任意子态保证终态可达", cap: "<b>结构级免疫：</b>哪怕新增第 5 个子态，只要落在父框内部就自动继承退出通道，从结构上消灭漏边死锁。" }
+            ]
+          }
+        ];
+
+        let modeIdx = 1;
+        let u = 0.52;
+        let playing = false;
+        let speedMul = 1.0;
+
+        function box(parent, x, y, w, h, title, sub, fill, stroke, col, grp) {
+          const g = el("g", { "data-group": grp, style: "cursor:pointer" }, parent);
+          el("rect", { x, y, width: w, height: h, rx: 9, fill, stroke, "stroke-width": "1.6" }, g);
+          const t1 = el("text", { x: x + w / 2, y: y + (sub ? 21 : h / 2), "text-anchor": "middle", "dominant-baseline": "central", "font-size": "12", "font-weight": "700", fill: col }, g);
+          t1.textContent = title;
+          if (sub) {
+            const t2 = el("text", { x: x + w / 2, y: y + 40, "text-anchor": "middle", "dominant-baseline": "central", "font-size": "10", "font-weight": "600", fill: col, opacity: "0.85" }, g);
+            t2.textContent = sub;
+          }
+          return g;
+        }
+
+        function rebuild() {
+          modeBtns.forEach((b, i) => b.classList.toggle("active", i === modeIdx));
+          stage.innerHTML = "";
+
+          if (modeIdx === 0) {
+            // Flat spaghetti diagram
+            box(stage, 20, 42, 138, 56, "流式生成中", "子态 A", "#EFF6FF", "#1D4ED8", "#1E3A8A", "sub-0");
+            box(stage, 194, 42, 138, 56, "高危工具待批", "子态 B", "#F5F3FF", "#6D28D9", "#4C1D95", "sub-1");
+            box(stage, 368, 42, 138, 56, "沙箱运行中", "子态 C", "#F0FDFA", "#0F766E", "#115E59", "sub-2");
+            box(stage, 194, 188, 152, 60, "审批超时作废", "✕ 漏写取消边 (死锁)", "#FEE2E2", "#DC2626", "#991B1B", "sub-3");
+
+            box(stage, 578, 108, 108, 56, "取消排空", "散装汇入", "#FFFBEB", "#B45309", "#92400E", "exit");
+            box(stage, 712, 108, 94, 56, "干净终止", "终态", "#F0FDFA", "#0F766E", "#115E59", "term");
+
+            const wires = [
+              "M 158 70 L 194 70",
+              "M 332 70 L 368 70",
+              "M 263 98 L 263 188",
+              "M 89 98 C 120 156, 510 156, 578 136",
+              "M 263 98 C 330 144, 510 144, 578 128",
+              "M 437 98 C 480 124, 520 124, 578 120",
+              "M 686 136 L 712 136"
+            ];
+            wires.forEach((d, idx) => {
+              el("path", {
+                d, fill: "none",
+                stroke: idx >= 3 && idx <= 5 ? "#DC2626" : "#94A3B8",
+                "stroke-width": idx >= 3 && idx <= 5 ? "1.6" : "1.4",
+                "stroke-dasharray": idx >= 3 && idx <= 5 ? "4 3" : "",
+                "marker-end": idx >= 3 && idx <= 5 ? "url(#h-arr-red)" : "url(#h-arr-muted)"
+              }, stage);
+            });
+
+            el("rect", { x: 364, y: 204, width: 196, height: 26, rx: 6, fill: "#FEF2F2", stroke: "#FCA5A5" }, stage);
+            const wt = el("text", { x: 462, y: 217.5, "text-anchor": "middle", "dominant-baseline": "central", "font-size": "10.5", "font-weight": "700", fill: "#DC2626" }, stage);
+            wt.textContent = "缺失连线 -> 卡死 0 出边";
+          } else {
+            // Parent state envelope
+            const pg = el("g", { "data-group": "parent", style: "cursor:pointer" }, stage);
+            el("rect", { x: 18, y: 18, width: 492, height: 238, rx: 14, fill: "#F8FAFC", stroke: "#0F766E", "stroke-width": "2" }, pg);
+            el("rect", { x: 30, y: 8, width: 222, height: 22, rx: 6, fill: "#0F766E" }, pg);
+            const pt = el("text", { x: 141, y: 19.5, "text-anchor": "middle", "dominant-baseline": "central", "font-size": "11", "font-weight": "700", fill: "#FFFFFF" }, pg);
+            pt.textContent = "父状态：任务活跃期 (共享统一退路)";
+
+            box(stage, 36, 56, 128, 56, "流式生成中", "子态 A", "#EFF6FF", "#1D4ED8", "#1E3A8A", "parent");
+            box(stage, 198, 56, 128, 56, "高危工具待批", "子态 B", "#F5F3FF", "#6D28D9", "#4C1D95", "parent");
+            box(stage, 360, 56, 128, 56, "沙箱运行中", "子态 C", "#F0FDFA", "#0F766E", "#115E59", "parent");
+            box(stage, 198, 168, 128, 56, "审批超时作废", "自动继承父框出口", "#FFFBEB", "#B45309", "#92400E", "parent");
+
+            el("path", { d: "M 164 84 L 198 84", fill: "none", stroke: "#1D4ED8", "stroke-width": "1.6", "marker-end": "url(#h-arr-blue)" }, stage);
+            el("path", { d: "M 326 84 L 360 84", fill: "none", stroke: "#1D4ED8", "stroke-width": "1.6", "marker-end": "url(#h-arr-blue)" }, stage);
+            el("path", { d: "M 262 112 L 262 168", fill: "none", stroke: "#94A3B8", "stroke-width": "1.6", "marker-end": "url(#h-arr-muted)" }, stage);
+
+            // Single unified exit edge attached to outer parent border!
+            const eg = el("g", { "data-group": "exit", style: "cursor:pointer" }, stage);
+            el("path", {
+              id: "v2h-main-exit",
+              d: "M 510 136 L 606 136",
+              fill: "none", stroke: "#0F766E", "stroke-width": "2.8", "marker-end": "url(#h-arr-teal)"
+            }, eg);
+            el("rect", { x: 518, y: 102, width: 82, height: 22, rx: 11, fill: "#F0FDFA", stroke: "#5EEAD4" }, eg);
+            const et = el("text", { x: 559, y: 113.5, "text-anchor": "middle", "dominant-baseline": "central", "font-size": "10.5", "font-weight": "700", fill: "#0F766E" }, eg);
+            et.textContent = "取消 / 超时";
+
+            box(stage, 608, 108, 92, 56, "取消排空", "释放句柄", "#F5F3FF", "#6D28D9", "#4C1D95", "exit");
+            box(stage, 718, 108, 88, 56, "干净终止", "✓ 无死锁", "#F0FDFA", "#0F766E", "#115E59", "term");
+            el("path", { d: "M 700 136 L 718 136", fill: "none", stroke: "#0F766E", "stroke-width": "2", "marker-end": "url(#h-arr-teal)" }, stage);
+          }
+
+          pillsWrap.innerHTML = "";
+          MODES[modeIdx].milestones.forEach(ms => {
+            const p = document.createElement("button");
+            p.type = "button";
+            p.className = "ms-pill";
+            p.textContent = ms.label;
+            p.addEventListener("click", () => {
+              setPlaying(false);
+              u = ms.t;
+              scrub.value = String(Math.round(u * 1000));
+              update();
+            });
+            pillsWrap.appendChild(p);
+          });
+          update();
+        }
+
+        function setPlaying(on) {
+          playing = on;
+          btnPlay.textContent = on ? "⏸ 暂停" : "▶ 播放";
+        }
+
+        function activeIdx(m, prog) {
+          let idx = 0;
+          m.milestones.forEach((ms, i) => {
+            const prevMid = i === 0 ? 0 : (m.milestones[i - 1].t + ms.t) / 2;
+            if (prog >= prevMid) idx = i;
+          });
+          return idx;
+        }
+
+        function update() {
+          const m = MODES[modeIdx];
+          const idx = activeIdx(m, u);
+          const ms = m.milestones[idx];
+          [...pillsWrap.children].forEach((p, i) => p.classList.toggle("active", i === idx));
+          caption.innerHTML = ms.cap;
+          clock.textContent = `${(u * m.cycleSec).toFixed(1)}s / ${m.cycleSec}s`;
+
+          if (modeIdx === 1 && idx >= 1) {
+            const r = clamp((u - 0.3) / 0.6, 0, 1);
+            bead.setAttribute("cx", f1(lerp(510, 718, r)));
+            bead.setAttribute("cy", "136");
+            bead.setAttribute("visibility", "visible");
+          } else {
+            bead.setAttribute("visibility", "hidden");
+          }
+        }
+
+        modeBtns.forEach(b => {
+          b.addEventListener("click", () => {
+            modeIdx = Number(b.dataset.mode);
+            u = 0.52;
+            scrub.value = String(Math.round(u * 1000));
+            setPlaying(false);
+            rebuild();
+          });
+        });
+
+        btnPlay.addEventListener("click", () => setPlaying(!playing));
+        btnPrev.addEventListener("click", () => {
+          setPlaying(false);
+          const m = MODES[modeIdx];
+          const idx = (activeIdx(m, u) + m.milestones.length - 1) % m.milestones.length;
+          u = m.milestones[idx].t;
+          scrub.value = String(Math.round(u * 1000));
+          update();
+        });
+        btnNext.addEventListener("click", () => {
+          setPlaying(false);
+          const m = MODES[modeIdx];
+          const idx = (activeIdx(m, u) + 1) % m.milestones.length;
+          u = m.milestones[idx].t;
+          scrub.value = String(Math.round(u * 1000));
+          update();
+        });
+        scrub.addEventListener("input", () => {
+          setPlaying(false);
+          u = Number(scrub.value) / 1000;
+          update();
+        });
+        speedBtns.forEach(b => {
+          b.addEventListener("click", () => {
+            speedMul = Number(b.dataset.sp);
+            speedBtns.forEach(x => x.classList.toggle("active", x === b));
+          });
+        });
+
+        let prev = performance.now();
+        function tick(now) {
+          const dt = Math.min(0.05, (now - prev) / 1000);
+          prev = now;
+          if (playing) {
+            const cycle = MODES[modeIdx].cycleSec;
+            u = (u + (dt / cycle) * speedMul) % 1;
+            scrub.value = String(Math.round(u * 1000));
+            update();
+          }
+          requestAnimationFrame(tick);
+        }
+
+        rebuild();
+        scrub.value = String(Math.round(u * 1000));
+        requestAnimationFrame(tick);
+      })();
+
+      /* =========================================================================
+         三层防抖：固定所有 .story-fig 容器高度
+         ========================================================================= */
+      const figs = [...document.querySelectorAll(".story-fig")];
+      let lockedW = 0;
+      function lockAllFigs() {
+        const w = Math.round(window.innerWidth);
+        if (Math.abs(w - lockedW) <= 1) return;
+        lockedW = w;
+        figs.forEach(fig => {
+          fig.style.height = "auto";
+          fig.style.height = `${fig.offsetHeight}px`;
+        });
+      }
+      window.addEventListener("resize", lockAllFigs);
+      lockAllFigs();
+    })();
+  </script>
+</body>
+</html>

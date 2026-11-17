@@ -1,0 +1,1293 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="use-iframe" content="true">
+  <meta name="html-box-height-mode" content="auto">
+  <title>契约状态流转与最短反例示例 — lark-tech-storytelling</title>
+  <style>
+    :root {
+      --page-wrap: #F3F4F6;
+      --bg: #FFFFFF;
+      --subtle: #F8FAFC;
+      --ink: #0F172A;
+      --ink-2: #334155;
+      --muted: #64748B;
+      --faint: #94A3B8;
+      --hairline: #E2E8F0;
+      --border-strong: #CBD5E1;
+
+      --blue: #1D4ED8;
+      --blue-fill: #DBEAFE;
+      --blue-soft: #EFF6FF;
+
+      --teal: #0F766E;
+      --teal-fill: #CCFBF1;
+      --teal-soft: #F0FDFA;
+
+      --violet: #6D28D9;
+      --violet-fill: #EDE9FE;
+      --violet-soft: #F5F3FF;
+
+      --amber: #B45309;
+      --amber-fill: #FEF3C7;
+      --amber-soft: #FFFBEB;
+
+      --red: #DC2626;
+      --red-fill: #FEE2E2;
+      --red-soft: #FEF2F2;
+
+      --green: #047857;
+      --green-soft: #ECFDF5;
+
+      --sans: -apple-system, BlinkMacSystemFont, "Inter", "PingFang SC", "Noto Sans SC", "Hiragino Sans GB", sans-serif;
+      --mono: "SF Mono", "JetBrains Mono", Menlo, Monaco, Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--page-wrap);
+      color: var(--ink);
+      font-family: var(--sans);
+      line-height: 1.75;
+      padding: 28px 16px 64px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .lark-page {
+      max-width: 880px;
+      margin: 0 auto;
+      background: var(--bg);
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05), 0 14px 36px rgba(15, 23, 42, 0.04);
+      padding: 46px 54px 60px;
+    }
+    @media (max-width: 680px) {
+      .lark-page { padding: 28px 20px 42px; }
+    }
+
+    h1.doc-title {
+      font-size: 27px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.32;
+      margin-bottom: 16px;
+      color: var(--ink);
+    }
+
+    .doc-lead {
+      border-left: 3px solid var(--ink);
+      padding: 4px 0 4px 16px;
+      margin-bottom: 28px;
+      color: var(--ink-2);
+      font-size: 14.8px;
+    }
+    .doc-lead p + p { margin-top: 6px; }
+    .doc-lead ul { padding-left: 18px; margin-top: 6px; }
+    .doc-lead li { margin: 3px 0; }
+
+    h2.sec-title {
+      font-size: 19.5px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      margin: 34px 0 12px;
+      color: var(--ink);
+    }
+
+    p.prose {
+      font-size: 15.5px;
+      color: var(--ink-2);
+      margin: 10px 0;
+    }
+    p.prose b { color: var(--ink); font-weight: 600; }
+
+    .cue-blue { background: var(--blue-soft); color: var(--blue); padding: 1px 6px; border-radius: 4px; font-weight: 500; font-size: 0.94em; }
+    .cue-violet { background: var(--violet-soft); color: var(--violet); padding: 1px 6px; border-radius: 4px; font-weight: 500; font-size: 0.94em; }
+    .cue-teal { background: var(--teal-soft); color: var(--teal); padding: 1px 6px; border-radius: 4px; font-weight: 500; font-size: 0.94em; }
+    .cue-amber { background: var(--amber-soft); color: var(--amber); padding: 1px 6px; border-radius: 4px; font-weight: 500; font-size: 0.94em; }
+    .cue-red { background: var(--red-soft); color: var(--red); padding: 1px 6px; border-radius: 4px; font-weight: 500; font-size: 0.94em; }
+    .hl-warm { background: #FEF3C7; padding: 1px 5px; border-radius: 3px; color: var(--ink); font-weight: 500; }
+
+    /* =========================================================================
+       Distill 纯白无界画布 + Statechart 契约灯条 + 三层防抖锁高
+       ========================================================================= */
+    .story-fig {
+      margin: 22px 0 30px;
+      padding: 18px 0 16px;
+      border-top: 1px solid var(--hairline);
+      border-bottom: 1px solid var(--hairline);
+      background: #FFFFFF;
+      overflow: hidden;
+    }
+
+    .sf-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .sf-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .sf-tag {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--teal);
+      background: var(--teal-soft);
+      border: 1px solid rgba(15, 118, 110, 0.22);
+      padding: 2px 7px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+    .sf-title {
+      font-size: 14.5px;
+      font-weight: 600;
+      color: var(--ink);
+    }
+    .sf-hint {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    /* 阶段 / 视图切换胶囊：常态与激活态字重一致，防止撑宽折行 */
+    .mode-switch {
+      display: flex;
+      gap: 6px;
+      background: #F1F5F9;
+      padding: 3px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .mode-switch::-webkit-scrollbar { display: none; }
+    .mode-btn {
+      appearance: none;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font-family: var(--sans);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      white-space: nowrap;
+      flex: 1;
+      text-align: center;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+    .mode-btn:hover { color: var(--ink); }
+    .mode-btn.active {
+      background: #FFFFFF;
+      color: var(--ink);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+    }
+
+    /* 显式不变量契约灯条（Invariants Strip） */
+    .inv-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    @media (max-width: 680px) {
+      .inv-strip { grid-template-columns: 1fr; }
+    }
+    .inv-card {
+      background: var(--subtle);
+      border: 1px solid var(--hairline);
+      border-radius: 8px;
+      padding: 7px 10px;
+      height: 50px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      overflow: hidden;
+      transition: border-color 0.18s ease, background 0.18s ease;
+    }
+    .inv-card.ok {
+      background: var(--teal-soft);
+      border-color: rgba(15, 118, 110, 0.25);
+    }
+    .inv-card.warn {
+      background: var(--amber-soft);
+      border-color: rgba(180, 83, 9, 0.35);
+    }
+    .inv-card.fail {
+      background: var(--red-soft);
+      border-color: rgba(220, 38, 38, 0.45);
+    }
+    .inv-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--ink);
+      white-space: nowrap;
+    }
+    .inv-badge {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+    .inv-card.ok .inv-badge { color: var(--teal); background: rgba(15, 118, 110, 0.12); }
+    .inv-card.warn .inv-badge { color: var(--amber); background: rgba(180, 83, 9, 0.14); }
+    .inv-card.fail .inv-badge { color: var(--red); background: rgba(220, 38, 38, 0.14); }
+    .inv-sub {
+      font-size: 11px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 1px;
+    }
+
+    /* 画布锁定宽高比 */
+    .sf-canvas {
+      width: 100%;
+      background: #FFFFFF;
+      overflow: hidden;
+    }
+    .sf-canvas.ratio-v1 { aspect-ratio: 820 / 316; }
+    .sf-canvas.ratio-v1b { aspect-ratio: 820 / 264; }
+    .sf-canvas svg {
+      display: block;
+      width: 100%;
+      height: auto;
+      user-select: none;
+    }
+
+    /* 悬停聚光灯（动画循环零 DOM 重建，避免悬停闪烁） */
+    .sf-canvas svg.spotlight [data-group] {
+      opacity: 0.22 !important;
+      transition: opacity 0.16s ease;
+    }
+    .sf-canvas svg.spotlight [data-group].lit {
+      opacity: 1 !important;
+    }
+
+    /* 慢速手动传输控制栏 */
+    .transport-bar {
+      margin-top: 10px;
+      background: var(--subtle);
+      border: 1px solid var(--hairline);
+      border-radius: 10px;
+      padding: 9px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .tb-main {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .tb-btns {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      flex: none;
+    }
+    .tp-btn {
+      appearance: none;
+      border: 1px solid var(--border-strong);
+      background: #FFFFFF;
+      color: var(--ink);
+      height: 28px;
+      padding: 0 9px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--sans);
+      white-space: nowrap;
+    }
+    .tp-btn:hover { border-color: var(--ink); background: #F1F5F9; }
+    .tp-btn.primary {
+      background: var(--ink);
+      border-color: var(--ink);
+      color: #FFFFFF;
+      min-width: 72px;
+    }
+    .tp-range {
+      flex: 1;
+      min-width: 130px;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 5px;
+      border-radius: 999px;
+      background: #CBD5E1;
+      outline: none;
+      cursor: pointer;
+    }
+    .tp-range::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--ink);
+      border: 2px solid #FFFFFF;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.3);
+      cursor: grab;
+    }
+    .tp-clock {
+      font-family: var(--mono);
+      font-size: 11.5px;
+      color: var(--muted);
+      min-width: 64px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    .tp-speed {
+      display: inline-flex;
+      background: #E2E8F0;
+      padding: 2px;
+      border-radius: 6px;
+      gap: 2px;
+      flex: none;
+    }
+    .tp-speed button {
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 7px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .tp-speed button.active {
+      background: #FFFFFF;
+      color: var(--ink);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+    }
+
+    .tb-sub {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      min-height: 26px;
+      overflow: hidden;
+    }
+    .step-pills {
+      display: flex;
+      gap: 6px;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .step-pills::-webkit-scrollbar { display: none; }
+    .ms-pill {
+      appearance: none;
+      border: 1px solid var(--hairline);
+      background: #FFFFFF;
+      color: var(--muted);
+      font-family: var(--sans);
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+      white-space: nowrap;
+      flex: none;
+    }
+    .ms-pill:hover { border-color: var(--ink-2); color: var(--ink); }
+    .ms-pill.active {
+      background: var(--ink);
+      border-color: var(--ink);
+      color: #FFFFFF;
+    }
+    .ms-pill.is-break.active {
+      background: var(--red);
+      border-color: var(--red);
+      color: #FFFFFF;
+    }
+    .ms-pill.is-warn.active {
+      background: var(--amber);
+      border-color: var(--amber);
+      color: #FFFFFF;
+    }
+
+    /* 固定两行图注高度，防飞书文档抖动 */
+    .sf-caption {
+      margin-top: 9px;
+      font-size: 13px;
+      color: var(--ink-2);
+      line-height: 22px;
+      height: 44px;
+      overflow: hidden;
+    }
+    .sf-caption b { color: var(--ink); font-weight: 600; }
+
+    .summary-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 14px;
+      font-size: 13.8px;
+    }
+    .summary-table th {
+      text-align: left;
+      padding: 9px 12px;
+      border-bottom: 1.5px solid var(--border-strong);
+      color: var(--ink);
+      font-weight: 600;
+      background: var(--subtle);
+    }
+    .summary-table td {
+      padding: 9px 12px;
+      border-bottom: 1px solid var(--hairline);
+      color: var(--ink-2);
+      vertical-align: top;
+    }
+
+    @keyframes pulseRing {
+      0%, 100% { stroke-opacity: 0.85; stroke-width: 2.2; }
+      50% { stroke-opacity: 0.25; stroke-width: 5.5; }
+    }
+    .pulse-ring {
+      animation: pulseRing 1.8s ease-in-out infinite;
+    }
+  </style>
+</head>
+<body>
+  <!--
+    参考说明：本文件用于展示「飞书正文 + 契约状态流转图」的完整文图呼应效果；
+    实际为飞书 <html5-block> 生成单个独立 HTML 图表时，请参考 ../interactive-svg-template.html 只输出纯白无界图表容器，不要外包 .lark-page 模拟页框。
+  -->
+  <article class="lark-page">
+    <h1 class="doc-title">Agent 执行与审批状态设计：如何用“最短反例”揪出串写与死锁？</h1>
+
+    <div class="doc-lead">
+      <p><b>背景与验证思路</b>：状态机设计最容易犯的错，是只画“正常走通”的主链路，或者把复杂异常塞进一个含糊的“已取消”框里。本文先立下三条<b>读者看得懂的工程契约（Invariants）</b>，再沿着状态转移去撞破它们：</p>
+      <ul>
+        <li><b>契约 1 - 单轮隔离</b>：当前轮取消或开启新一轮后，旧轮次工具的迟到回执绝不能写入新上下文。</li>
+        <li><b>契约 2 - 授权门禁</b>：未获用户批准前，高危工具副作用绝不真正执行。</li>
+        <li><b>契约 3 - 终态可达</b>：任何非终态（含取消与超时并发）必有出边收敛至干净终态，绝不永久卡死。</li>
+      </ul>
+    </div>
+
+    <!-- ==================== 第一节 ==================== -->
+    <h2 class="sec-title">1. 为什么粗画一个“已取消”会藏住 Bug？从粒度预警到 4 步反例</h2>
+
+    <p class="prose">
+      评审时最常听到一句话：“用户点了中断，状态变成<b>已取消</b>不就完了？”但只要我们拒绝弱化契约，就会发现一个尴尬事实：如果把<span class="cue-amber">“工具进程还在排空”</span>和<span class="cue-teal">“资源已经彻底销毁”</span>强行揉进同一个状态框，这个节点有时安全、有时违规，形成典型的<b>粒度过粗预警（mayBreak）</b>。
+    </p>
+    <p class="prose">
+      把两个内部行为不同的子态拆开后，问题立刻显形——只需 <b>4 步最短路径</b>，旧轮次的迟到回执就会穿过新轮次边界，直接落入<span class="cue-red">旧回执串写新上下文（breaks 契约 1）</span>。点击下方模式切换胶囊，可以依次查看“粗粒度预警 → 拆分子态暴露反例 → 补齐轮次守卫闭环”的完整推演：
+    </p>
+
+    <!-- ==================== 图 1：平面状态图 × 契约灯条 × 最短反例 ==================== -->
+    <section class="story-fig" id="fig-v1-trace">
+      <div class="sf-header">
+        <div class="sf-title-wrap">
+          <span class="sf-tag">Contract Trace / Flat Statechart</span>
+          <span class="sf-title">单轮执行与取消排空状态图（悬停节点或连线可聚焦因果链）</span>
+        </div>
+        <span class="sf-hint">💡 切换模式对照 mayBreak 拆解与最短反例路径</span>
+      </div>
+
+      <div class="mode-switch" id="v1-modes">
+        <button type="button" class="mode-btn" data-mode="0">① 粗粒度草图 (mayBreak 预警)</button>
+        <button type="button" class="mode-btn active" data-mode="1">② 拆分子态 + 4 步最短反例 (breaks)</button>
+        <button type="button" class="mode-btn" data-mode="2">③ 补齐 [轮次号] 守卫 (契约恒成立)</button>
+      </div>
+
+      <div class="inv-strip" id="v1-invariants">
+        <div class="inv-card ok" id="v1-inv-1">
+          <div class="inv-top"><span>契约 1 - 单轮隔离</span><span class="inv-badge" id="v1-b1">✓ 成立</span></div>
+          <div class="inv-sub" id="v1-s1">旧轮次迟到回执不得写入当前上下文</div>
+        </div>
+        <div class="inv-card ok" id="v1-inv-2">
+          <div class="inv-top"><span>契约 2 - 授权门禁</span><span class="inv-badge" id="v1-b2">✓ 成立</span></div>
+          <div class="inv-sub" id="v1-s2">高危动作前必须经过显式批准</div>
+        </div>
+        <div class="inv-card ok" id="v1-inv-3">
+          <div class="inv-top"><span>契约 3 - 终态可达</span><span class="inv-badge" id="v1-b3">✓ 成立</span></div>
+          <div class="inv-sub" id="v1-s3">取消路径保持有向出边不悬空</div>
+        </div>
+      </div>
+
+      <div class="sf-canvas ratio-v1">
+        <svg id="svg-v1-main" viewBox="0 0 820 316" role="img" aria-label="Agent 执行与取消状态图及最短反例路径">
+          <defs>
+            <marker id="arr-muted" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto">
+              <path d="M1 1.5 L9 5 L1 8.5 z" fill="#94A3B8"/>
+            </marker>
+            <marker id="arr-blue" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M1 1.5 L9 5 L1 8.5 z" fill="#1D4ED8"/>
+            </marker>
+            <marker id="arr-teal" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M1 1.5 L9 5 L1 8.5 z" fill="#0F766E"/>
+            </marker>
+            <marker id="arr-amber" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M1 1.5 L9 5 L1 8.5 z" fill="#B45309"/>
+            </marker>
+            <marker id="arr-red" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto">
+              <path d="M1 1.5 L9 5 L1 8.5 z" fill="#DC2626"/>
+            </marker>
+          </defs>
+
+          <!-- 阶段语义底带：保持纯白底为主，仅以极淡顶条区分阶段 -->
+          <g pointer-events="none">
+            <rect x="14" y="10" width="246" height="22" rx="5" fill="#EFF6FF"/>
+            <text x="24" y="21.5" dominant-baseline="central" font-size="11" font-weight="700" fill="#1D4ED8">阶段 1 - 推理与执行态</text>
+
+            <rect x="282" y="10" width="244" height="22" rx="5" fill="#F5F3FF"/>
+            <text x="292" y="21.5" dominant-baseline="central" font-size="11" font-weight="700" fill="#6D28D9">阶段 2 - 中断与等待排空</text>
+
+            <rect x="548" y="10" width="258" height="22" rx="5" fill="#F0FDFA"/>
+            <text x="558" y="21.5" dominant-baseline="central" font-size="11" font-weight="700" fill="#0F766E">阶段 3 - 新轮次开启 / 结果判定</text>
+          </g>
+
+          <!-- 静态边层、动态高亮边层、节点层（模式切换时更新，动画帧零 DOM 重建） -->
+          <g id="v1-edges"></g>
+          <g id="v1-nodes"></g>
+
+          <!-- 沿着激活路径滑行的信号珠 -->
+          <circle id="v1-bead" r="5" fill="#1D4ED8" stroke="#FFFFFF" stroke-width="2" visibility="hidden" pointer-events="none"/>
+
+          <!-- 诚实省略声明 + 精简图例（置于底部无遮挡区） -->
+          <g transform="translate(14 294)" font-size="10.5" fill="#64748B" pointer-events="none">
+            <rect x="0" y="-8" width="11" height="11" rx="3" fill="#FFFBEB" stroke="#B45309" stroke-dasharray="2.5 2"/>
+            <text x="16" y="1">mayBreak (合并掩盖风险)</text>
+
+            <rect x="162" y="-8" width="11" height="11" rx="3" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.6"/>
+            <text x="178" y="1">breaks (违背契约)</text>
+
+            <rect x="284" y="-8" width="11" height="11" rx="3" fill="#CCFBF1" stroke="#0F766E"/>
+            <text x="300" y="1">干净终态 / 安全放行</text>
+
+            <text x="792" y="1" text-anchor="end" font-family="var(--mono)" font-size="10" fill="#94A3B8">
+              已省略：任意非终态 -> 会话关闭销毁（保持主图 &lt;= 8 条核心路径）
+            </text>
+          </g>
+        </svg>
+      </div>
+
+      <div class="transport-bar">
+        <div class="tb-main">
+          <div class="tb-btns">
+            <button type="button" class="tp-btn" id="v1-prev">◀ 上一步</button>
+            <button type="button" class="tp-btn primary" id="v1-play">⏸ 暂停</button>
+            <button type="button" class="tp-btn" id="v1-next">下一步 ▶</button>
+          </div>
+          <input type="range" class="tp-range" id="v1-scrub" min="0" max="1000" value="0" aria-label="反例路径时间轴">
+          <span class="tp-clock" id="v1-clock">0.0s / 18s</span>
+          <div class="tp-speed" id="v1-speed">
+            <button type="button" data-sp="0.5">0.5×</button>
+            <button type="button" data-sp="1" class="active">1.0×</button>
+            <button type="button" data-sp="1.5">1.5×</button>
+          </div>
+        </div>
+        <div class="tb-sub">
+          <div class="step-pills" id="v1-pills"></div>
+        </div>
+      </div>
+
+      <p class="sf-caption" id="v1-caption"></p>
+    </section>
+
+    <!-- ==================== 第二节 ==================== -->
+    <h2 class="sec-title">2. 终态可达检验：揪出“审批超时 × 用户取消”的无出边死锁孤岛</h2>
+
+    <p class="prose">
+      解决了串写，还有一个更隐蔽的线上故障：用户在<span class="cue-violet">高危工具待批</span>界面犹豫太久，定时器刚巧把审批单判为超时作废，用户同一秒点了取消。<span class="hl-warm">如果回收逻辑只在“状态仍为待审批”时才生效，那么系统就会滑进一个 0 条合法出边的“回收挂起态”</span>。
+    </p>
+    <p class="prose">
+      在状态机思维里，这叫<b>违反终态可达（NoDeadlock 破缺）</b>——哪怕你把每条正常路径都测过了，只要在终端状态加上显式的“终态保持”，模型就会立刻指出哪一个非终态无路可走。下方图 2 支持一键启用兜底回收边，直观对比锁环是如何被解开的：
+    </p>
+
+    <!-- ==================== 图 2：NoDeadlock 死锁孤岛解剖 ==================== -->
+    <section class="story-fig" id="fig-v1-deadlock">
+      <div class="sf-header">
+        <div class="sf-title-wrap">
+          <span class="sf-tag">NoDeadlock Check / Single-Mechanism</span>
+          <span class="sf-title">审批并发竞态：从 0 条出边卡死到补齐兜底收敛</span>
+        </div>
+        <div class="mode-switch" id="v1d-modes" style="margin-bottom:0;width:auto;">
+          <button type="button" class="mode-btn active" data-fixed="0">漏写并发边 (NoDeadlock 破缺)</button>
+          <button type="button" class="mode-btn" data-fixed="1">补齐兜底回收边 (终态可达)</button>
+        </div>
+      </div>
+
+      <div class="sf-canvas ratio-v1b">
+        <svg id="svg-v1-deadlock" viewBox="0 0 820 264" role="img" aria-label="审批超时与用户取消并发导致无出边死锁对比图">
+          <defs>
+            <marker id="dl-arr-muted" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto">
+              <path d="M1 1.5 L9 5 L1 8.5 z" fill="#94A3B8"/>
+            </marker>
+            <marker id="dl-arr-red" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto">
+              <path d="M1 1.5 L9 5 L1 8.5 z" fill="#DC2626"/>
+            </marker>
+            <marker id="dl-arr-teal" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M1 1.5 L9 5 L1 8.5 z" fill="#0F766E"/>
+            </marker>
+          </defs>
+          <g id="v1d-edges"></g>
+          <g id="v1d-nodes"></g>
+          <circle id="v1d-bead" r="5" fill="#DC2626" stroke="#FFFFFF" stroke-width="2" visibility="hidden" pointer-events="none"/>
+        </svg>
+      </div>
+
+      <div class="transport-bar">
+        <div class="tb-main">
+          <div class="tb-btns">
+            <button type="button" class="tp-btn" id="v1d-prev">◀ 上一步</button>
+            <button type="button" class="tp-btn primary" id="v1d-play">⏸ 暂停</button>
+            <button type="button" class="tp-btn" id="v1d-next">下一步 ▶</button>
+          </div>
+          <input type="range" class="tp-range" id="v1d-scrub" min="0" max="1000" value="0" aria-label="死锁反例进度条">
+          <span class="tp-clock" id="v1d-clock">0.0s / 16s</span>
+          <div class="tp-speed" id="v1d-speed">
+            <button type="button" data-sp="0.5">0.5×</button>
+            <button type="button" data-sp="1" class="active">1.0×</button>
+            <button type="button" data-sp="1.5">1.5×</button>
+          </div>
+        </div>
+        <div class="tb-sub">
+          <div class="step-pills" id="v1d-pills"></div>
+        </div>
+      </div>
+
+      <p class="sf-caption" id="v1d-caption"></p>
+    </section>
+
+    <!-- ==================== 第三节：状态边界隐患与守卫收口对照 ==================== -->
+    <h2 class="sec-title">3. 状态边界隐患与守卫收口对照</h2>
+
+    <table class="summary-table">
+      <colgroup>
+        <col width="170"/>
+        <col width="280"/>
+        <col width="320"/>
+      </colgroup>
+      <thead>
+        <tr>
+          <th>边界场景</th>
+          <th>暴露出的最短反例路径</th>
+          <th>守卫条件与收口设计</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>取消后迅速发起新轮</b></td>
+          <td>粗粒度「已取消」掩盖在途工具（<code>mayBreak</code>）；拆出「取消排空中」后，4 步即可让旧轮回执串写新上下文（<code>breaks 契约 1</code>）。</td>
+          <td>请求与回执绑定单调递增轮次号，接收边附带 <code>[回执轮次 == 当前轮次]</code> 守卫，孤儿回执直接安全丢弃。</td>
+        </tr>
+        <tr>
+          <td><b>审批超时与取消并发</b></td>
+          <td>定时器先将审批单标为「审批已超时作废」，同毫秒用户点击取消进入「回收挂起态」，因旧清理条件为假导致 0 条可用出边卡死（<code>NoDeadlock</code>）。</td>
+          <td>取消收口路径移去对原审批单状态的狭窄前置要求，兜底强制释放沙箱句柄并汇入「已干净终止」。</td>
+        </tr>
+        <tr>
+          <td><b>高危工具未批准前执行</b></td>
+          <td>审批门禁与工具调用共用同一状态时，旁路重试或超时回退容易在无授权令牌的情况下触发沙箱执行（<code>breaks 契约 2</code>）。</td>
+          <td>将「高危工具待批」与「沙箱执行」严格隔离为前后置阶段，下游执行边显式校验有效授权凭证。</td>
+        </tr>
+      </tbody>
+    </table>
+  </article>
+
+  <script>
+    (() => {
+      const NS = "http://www.w3.org/2000/svg";
+      const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+      const lerp = (a, b, u) => a + (b - a) * u;
+      const f1 = n => n.toFixed(1);
+
+      function el(tag, attrs = {}, parent = null) {
+        const node = document.createElementNS(NS, tag);
+        for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+        if (parent) parent.appendChild(node);
+        return node;
+      }
+
+      // Compute point along cubic/quadratic/line SVG path for smooth bead glide
+      function samplePath(pathEl, ratio) {
+        if (!pathEl) return { x: 0, y: 0 };
+        const len = pathEl.getTotalLength();
+        const pt = pathEl.getPointAtLength(clamp(ratio, 0, 1) * len);
+        return { x: pt.x, y: pt.y };
+      }
+
+      function attachSpotlight(svgEl) {
+        let hovered = null;
+        const sync = () => {
+          svgEl.classList.toggle("spotlight", !!hovered);
+          svgEl.querySelectorAll("[data-group]").forEach(n => {
+            n.classList.toggle("lit", n.getAttribute("data-group") === hovered);
+          });
+        };
+        svgEl.addEventListener("pointermove", e => {
+          const hit = e.target.closest && e.target.closest("[data-group]");
+          const nxt = hit ? hit.getAttribute("data-group") : null;
+          if (nxt !== hovered) { hovered = nxt; sync(); }
+        });
+        svgEl.addEventListener("pointerleave", () => {
+          if (hovered !== null) { hovered = null; sync(); }
+        });
+      }
+
+      // Draw a labeled curved edge with a crisp white pill behind text so lines never strike through words
+      function drawEdge(parent, cfg) {
+        const g = el("g", { "data-group": cfg.grp || "path", style: "cursor:pointer" }, parent);
+        const path = el("path", {
+          d: cfg.d,
+          fill: "none",
+          stroke: cfg.stroke || "#CBD5E1",
+          "stroke-width": cfg.width || "1.7",
+          "stroke-dasharray": cfg.dash || "",
+          "marker-end": `url(#${cfg.marker || "arr-muted"})`,
+          "data-edge-id": cfg.id
+        }, g);
+
+        if (cfg.label) {
+          const textLen = [...cfg.label].reduce((acc, c) => acc + (c.charCodeAt(0) > 127 ? 10.6 : 6.0), 14);
+          const bx = cfg.lx - textLen / 2;
+          const by = cfg.ly - 10;
+          el("rect", {
+            x: f1(bx), y: f1(by), width: f1(textLen), height: 20, rx: 10,
+            fill: cfg.pillBg || "#FFFFFF",
+            stroke: cfg.pillBorder || "#E2E8F0",
+            "stroke-width": "1"
+          }, g);
+          const txt = el("text", {
+            x: f1(cfg.lx), y: f1(cfg.ly + 0.5),
+            "text-anchor": "middle", "dominant-baseline": "central",
+            "font-size": "10.5", "font-weight": "600",
+            fill: cfg.textFill || "#475569"
+          }, g);
+          txt.textContent = cfg.label;
+        }
+        return { g, path };
+      }
+
+      function drawNode(parent, n) {
+        const g = el("g", { "data-group": n.grp || n.id, style: "cursor:pointer" }, parent);
+        if (n.pulse) {
+          el("rect", {
+            x: n.x - 4, y: n.y - 4, width: n.w + 8, height: n.h + 8, rx: 13,
+            fill: "none", stroke: "#DC2626", class: "pulse-ring"
+          }, g);
+        }
+        const rect = el("rect", {
+          x: n.x, y: n.y, width: n.w, height: n.h, rx: 10,
+          fill: n.fill, stroke: n.stroke, "stroke-width": n.sw || "1.6",
+          "stroke-dasharray": n.dash || "",
+          "data-node-id": n.id
+        }, g);
+
+        const titleY = n.sub ? n.y + n.h * 0.37 : n.y + n.h * 0.5;
+        const t1 = el("text", {
+          x: n.x + n.w / 2, y: f1(titleY),
+          "text-anchor": "middle", "dominant-baseline": "central",
+          "font-size": "12.5", "font-weight": "700", fill: n.titleCol || "#0F172A"
+        }, g);
+        t1.textContent = n.title;
+
+        if (n.sub) {
+          const t2 = el("text", {
+            x: n.x + n.w / 2, y: f1(n.y + n.h * 0.7),
+            "text-anchor": "middle", "dominant-baseline": "central",
+            "font-size": "10.5", "font-weight": "600", fill: n.subCol || "#64748B"
+          }, g);
+          t2.textContent = n.sub;
+        }
+        return { g, rect };
+      }
+
+      /* =========================================================================
+         图 1：平面状态图 × 契约灯条 × 最短反例
+         ========================================================================= */
+      (function initFig1() {
+        const svg = document.getElementById("svg-v1-main");
+        const gEdges = document.getElementById("v1-edges");
+        const gNodes = document.getElementById("v1-nodes");
+        const bead = document.getElementById("v1-bead");
+
+        const modeBtns = [...document.querySelectorAll("#v1-modes .mode-btn")];
+        const inv1 = document.getElementById("v1-inv-1"), b1 = document.getElementById("v1-b1"), s1 = document.getElementById("v1-s1");
+        const inv2 = document.getElementById("v1-inv-2"), b2 = document.getElementById("v1-b2"), s2 = document.getElementById("v1-s2");
+        const inv3 = document.getElementById("v1-inv-3"), b3 = document.getElementById("v1-b3"), s3 = document.getElementById("v1-s3");
+
+        const btnPrev = document.getElementById("v1-prev");
+        const btnPlay = document.getElementById("v1-play");
+        const btnNext = document.getElementById("v1-next");
+        const scrub = document.getElementById("v1-scrub");
+        const clock = document.getElementById("v1-clock");
+        const pillsWrap = document.getElementById("v1-pills");
+        const caption = document.getElementById("v1-caption");
+        const speedBtns = [...document.querySelectorAll("#v1-speed button")];
+
+        attachSpotlight(svg);
+
+        const MODES = [
+          {
+            // Mode 0: Coarse diagram with mayBreak
+            cycleSec: 16,
+            nodes: [
+              { id: "idle", x: 24, y: 54, w: 170, h: 52, fill: "#F8FAFC", stroke: "#94A3B8", title: "空闲等待输入", sub: "无在途调用", grp: "step-0" },
+              { id: "run", x: 24, y: 188, w: 170, h: 54, fill: "#EFF6FF", stroke: "#1D4ED8", title: "思考并调用工具", sub: "外部沙箱执行中", titleCol: "#1E3A8A", subCol: "#3B82F6", grp: "step-1" },
+              { id: "coarse", x: 304, y: 112, w: 200, h: 66, fill: "#FFFBEB", stroke: "#B45309", sw: "2.0", dash: "5 3", title: "已取消 (混合粗态)", sub: "⚠ mayBreak：含未排空子态", titleCol: "#92400E", subCol: "#B45309", grp: "step-2" },
+              { id: "newr", x: 584, y: 74, w: 208, h: 54, fill: "#EFF6FF", stroke: "#1D4ED8", title: "新一轮推理中", sub: "部分路径承接旧工具幽灵", titleCol: "#1E3A8A", subCol: "#B45309", grp: "step-3" },
+              { id: "done", x: 584, y: 192, w: 208, h: 50, fill: "#F0FDFA", stroke: "#0F766E", title: "本轮正常完结", sub: "安全回到终态", titleCol: "#115E59", subCol: "#0F766E", grp: "happy" }
+            ],
+            edges: [
+              { id: "e0", d: "M 109 106 L 109 188", lx: 109, ly: 147, label: "用户提问触发工具", stroke: "#1D4ED8", marker: "arr-blue", textFill: "#1D4ED8", pillBorder: "#BFDBFE", grp: "step-1" },
+              { id: "e1", d: "M 194 202 C 254 198, 252 146, 304 146", lx: 246, ly: 173, label: "用户点击取消", stroke: "#B45309", marker: "arr-amber", textFill: "#B45309", pillBorder: "#FDE68A", grp: "step-2" },
+              { id: "e2", d: "M 504 134 C 544 134, 544 101, 584 101", lx: 546, ly: 96, label: "开启新一轮提问", stroke: "#B45309", marker: "arr-amber", textFill: "#B45309", pillBorder: "#FDE68A", grp: "step-3" },
+              { id: "e3", d: "M 194 224 L 584 224", lx: 388, ly: 224, label: "工具按时正常回包", stroke: "#0F766E", marker: "arr-teal", textFill: "#0F766E", pillBorder: "#99F6E4", grp: "happy" }
+            ],
+            milestones: [
+              { t: 0.08, node: "idle", edge: null, inv1: "ok", inv1Txt: "✓ 成立", pillKind: "", label: "Step 0: 空闲起点", cap: "<b>Step 0 - 起点：</b>会话处于空闲等待状态，此时不存在任何在途工具调用。" },
+              { t: 0.36, node: "run", edge: "e0", inv1: "ok", inv1Txt: "✓ 成立", pillKind: "", label: "Step 1: 发起工具调用", cap: "<b>Step 1 - 工具入途：</b>Agent 发出工具请求并等待结果，此时轮次仍在正常运行。" },
+              { t: 0.66, node: "coarse", edge: "e1", inv1: "warn", inv1Txt: "⚠ mayBreak", pillKind: "is-warn", label: "Step 2: 落入混合粗态", cap: "<b>Step 2 - 粒度警报 (mayBreak)：</b>把“工具仍在排空”和“已彻底销毁”合并成一个“已取消”框，无法分辨后面哪条路会出事。" },
+              { t: 0.92, node: "newr", edge: "e2", inv1: "warn", inv1Txt: "⚠ 风险未清", pillKind: "is-warn", label: "Step 3: 隐患带入新一轮", cap: "<b>Step 3 - 拆解信号：</b>依据状态图原则，一旦某合并态出现 mayBreak，必须按“是否仍在途”将其拆成两个独立状态。" }
+            ]
+          },
+          {
+            // Mode 1: Split states + 4-step shortest counterexample (breaks)
+            cycleSec: 18,
+            nodes: [
+              { id: "idle", x: 20, y: 54, w: 162, h: 52, fill: "#F8FAFC", stroke: "#94A3B8", title: "空闲等待输入", sub: "无在途进程", grp: "step-0" },
+              { id: "run", x: 20, y: 188, w: 162, h: 54, fill: "#EFF6FF", stroke: "#1D4ED8", title: "思考并调用工具", sub: "工具 A 在途运行", titleCol: "#1E3A8A", subCol: "#3B82F6", grp: "step-1" },
+              { id: "drain", x: 282, y: 66, w: 186, h: 56, fill: "#F5F3FF", stroke: "#6D28D9", sw: "1.9", title: "取消排空中 (子态 1)", sub: "界面已停 / 旧工具仍在跑", titleCol: "#4C1D95", subCol: "#6D28D9", grp: "step-2" },
+              { id: "aborted", x: 282, y: 204, w: 186, h: 50, fill: "#F0FDFA", stroke: "#0F766E", title: "已干净终止 (子态 2)", sub: "句柄已彻底释放", titleCol: "#115E59", subCol: "#0F766E", grp: "safe" },
+              { id: "newr", x: 598, y: 66, w: 200, h: 56, fill: "#EFF6FF", stroke: "#1D4ED8", sw: "1.9", title: "新一轮推理中", sub: "当前轮次等待工具 B", titleCol: "#1E3A8A", subCol: "#3B82F6", grp: "step-3" },
+              { id: "corrupt", x: 598, y: 192, w: 200, h: 64, fill: "#FEE2E2", stroke: "#DC2626", sw: "2.2", pulse: true, title: "旧回执串写新上下文", sub: "✕ breaks 契约 1 - 单轮隔离", titleCol: "#991B1B", subCol: "#DC2626", grp: "step-4" }
+            ],
+            edges: [
+              { id: "e0", d: "M 101 106 L 101 188", lx: 101, ly: 147, label: "Step 1: 触发工具 A", stroke: "#1D4ED8", width: "2.2", marker: "arr-blue", textFill: "#1D4ED8", pillBorder: "#93C5FD", grp: "step-1" },
+              { id: "e1", d: "M 182 202 C 236 198, 234 96, 282 96", lx: 234, ly: 144, label: "Step 2: 点击取消", stroke: "#6D28D9", width: "2.2", marker: "arr-blue", textFill: "#6D28D9", pillBorder: "#DDD6FE", grp: "step-2" },
+              { id: "e2", d: "M 468 94 L 598 94", lx: 533, ly: 94, label: "Step 3: 发新提问", stroke: "#1D4ED8", width: "2.2", marker: "arr-blue", textFill: "#1D4ED8", pillBorder: "#93C5FD", grp: "step-3" },
+              { id: "e3", d: "M 698 122 L 698 192", lx: 698, ly: 157, label: "Step 4: 旧回执到达 [未验轮次]", stroke: "#DC2626", width: "2.4", marker: "arr-red", textFill: "#DC2626", pillBg: "#FEF2F2", pillBorder: "#FCA5A5", grp: "step-4" },
+              { id: "e_drain", d: "M 375 122 L 375 204", lx: 375, ly: 163, label: "句柄确认关闭", stroke: "#CBD5E1", marker: "arr-muted", textFill: "#64748B", grp: "safe" },
+              { id: "e_safe", d: "M 468 229 C 534 229, 534 110, 598 110", lx: 533, ly: 175, label: "安全开启新轮", stroke: "#CBD5E1", dash: "4 3", marker: "arr-muted", textFill: "#64748B", grp: "safe" }
+            ],
+            milestones: [
+              { t: 0.06, node: "idle", edge: null, inv1: "ok", inv1Txt: "✓ 成立", pillKind: "", label: "Step 0: 起点", cap: "<b>反例起点 (Step 0)：</b>会话处于空闲等待状态，当前三项契约均满足。" },
+              { t: 0.26, node: "run", edge: "e0", inv1: "ok", inv1Txt: "✓ 成立", pillKind: "", label: "Step 1: 调用工具 A", cap: "<b>最短反例 Step 1：</b>用户提问触发高耗时工具 A，外部沙箱开始执行。" },
+              { t: 0.48, node: "drain", edge: "e1", inv1: "ok", inv1Txt: "✓ 成立", pillKind: "", label: "Step 2: 取消但未等排空", cap: "<b>最短反例 Step 2：</b>用户点击取消后界面立即停下，但工具 A 仍在后台“取消排空中”。" },
+              { t: 0.70, node: "newr", edge: "e2", inv1: "warn", inv1Txt: "⚠ 暴露风险", pillKind: "is-warn", label: "Step 3: 立刻开启新一轮", cap: "<b>最短反例 Step 3：</b>用户不等旧沙箱句柄销毁就发起新提问，进入“新一轮推理中”。" },
+              { t: 0.92, node: "corrupt", edge: "e3", inv1: "fail", inv1Txt: "✕ 破缺", pillKind: "is-break", label: "Step 4: 旧回执串写 (breaks)", cap: "<b>最短反例终点 (Step 4 / 破缺契约 1)：</b>旧工具 A 迟到回包且转移边未核验轮次号，结果被直接塞进新轮次上下文！" }
+            ]
+          },
+          {
+            // Mode 2: Fixed with [轮次号匹配] guard
+            cycleSec: 16,
+            nodes: [
+              { id: "idle", x: 20, y: 54, w: 162, h: 52, fill: "#F8FAFC", stroke: "#94A3B8", title: "空闲等待输入", sub: "无在途进程", grp: "step-0" },
+              { id: "run", x: 20, y: 188, w: 162, h: 54, fill: "#EFF6FF", stroke: "#1D4ED8", title: "思考并调用工具", sub: "携带当前轮次号", titleCol: "#1E3A8A", subCol: "#3B82F6", grp: "step-1" },
+              { id: "drain", x: 282, y: 66, w: 186, h: 56, fill: "#F5F3FF", stroke: "#6D28D9", title: "取消排空中", sub: "旧工具附带旧轮次标签", titleCol: "#4C1D95", subCol: "#6D28D9", grp: "step-2" },
+              { id: "aborted", x: 282, y: 204, w: 186, h: 50, fill: "#F0FDFA", stroke: "#0F766E", title: "已干净终止", sub: "句柄已彻底释放", titleCol: "#115E59", subCol: "#0F766E", grp: "safe" },
+              { id: "newr", x: 598, y: 66, w: 200, h: 56, fill: "#EFF6FF", stroke: "#1D4ED8", sw: "2.0", title: "新一轮推理中", sub: "仅接纳匹配当前轮次的回执", titleCol: "#1E3A8A", subCol: "#3B82F6", grp: "step-3" },
+              { id: "dropped", x: 598, y: 196, w: 200, h: 58, fill: "#F0FDFA", stroke: "#0F766E", sw: "2.0", title: "孤儿回执被安全丢弃", sub: "✓ 契约 1 恒成立 (不污染上下文)", titleCol: "#115E59", subCol: "#0F766E", grp: "step-4" }
+            ],
+            edges: [
+              { id: "e0", d: "M 101 106 L 101 188", lx: 101, ly: 147, label: "Step 1: 触发工具 A", stroke: "#1D4ED8", marker: "arr-blue", textFill: "#1D4ED8", pillBorder: "#93C5FD", grp: "step-1" },
+              { id: "e1", d: "M 182 202 C 236 198, 234 96, 282 96", lx: 234, ly: 144, label: "Step 2: 点击取消", stroke: "#6D28D9", marker: "arr-blue", textFill: "#6D28D9", pillBorder: "#DDD6FE", grp: "step-2" },
+              { id: "e2", d: "M 468 94 L 598 94", lx: 533, ly: 94, label: "Step 3: 递增轮次号", stroke: "#1D4ED8", marker: "arr-blue", textFill: "#1D4ED8", pillBorder: "#93C5FD", grp: "step-3" },
+              { id: "e3", d: "M 692 122 L 692 196", lx: 692, ly: 159, label: "旧回执 [轮次 != 当前轮]", stroke: "#0F766E", width: "2.2", marker: "arr-teal", textFill: "#0F766E", pillBg: "#F0FDFA", pillBorder: "#5EEAD4", grp: "step-4" },
+              { id: "e4", d: "M 798 225 C 814 205, 814 110, 798 96", lx: 752, ly: 159, label: "", stroke: "#0F766E", dash: "4 3", marker: "arr-teal", grp: "step-4" },
+              { id: "e_drain", d: "M 375 122 L 375 204", lx: 375, ly: 163, label: "句柄确认关闭", stroke: "#CBD5E1", marker: "arr-muted", textFill: "#64748B", grp: "safe" }
+            ],
+            milestones: [
+              { t: 0.08, node: "idle", edge: null, inv1: "ok", inv1Txt: "✓ 成立", pillKind: "", label: "Step 0: 起点", cap: "<b>守卫修复模式 (Step 0)：</b>每轮推理分配单调递增的轮次号，所有工具请求必须绑定轮次。" },
+              { t: 0.34, node: "drain", edge: "e1", inv1: "ok", inv1Txt: "✓ 成立", pillKind: "", label: "Step 1-2: 取消排空", cap: "<b>Step 1-2 - 排空中切换：</b>即便旧工具 A 还在沙箱运行，它携带的依然是旧轮次编号。" },
+              { t: 0.64, node: "newr", edge: "e2", inv1: "ok", inv1Txt: "✓ 成立", pillKind: "", label: "Step 3: 轮次号已切换", cap: "<b>Step 3 - 边界立起：</b>新提问将当前活跃轮次加一，写入上下文的边严格要求 [回执轮次 == 当前轮次]。" },
+              { t: 0.90, node: "dropped", edge: "e3", inv1: "ok", inv1Txt: "✓ 恒成立", pillKind: "", label: "Step 4: 拦截孤儿回执", cap: "<b>Step 4 - 契约闭环：</b>同一条迟到回执被守卫命中后安全丢弃并回到新轮次，全图再无反例可达违规态。" }
+            ]
+          }
+        ];
+
+        let modeIdx = 1;
+        let u = 0.26;
+        let playing = true;
+        let speedMul = 1.0;
+
+        let edgeMap = new Map();
+        let nodeMap = new Map();
+
+        function rebuildScene() {
+          const m = MODES[modeIdx];
+          modeBtns.forEach((b, i) => b.classList.toggle("active", i === modeIdx));
+
+          gEdges.innerHTML = "";
+          gNodes.innerHTML = "";
+          edgeMap.clear();
+          nodeMap.clear();
+
+          m.edges.forEach(cfg => {
+            edgeMap.set(cfg.id, drawEdge(gEdges, cfg));
+          });
+          m.nodes.forEach(cfg => {
+            nodeMap.set(cfg.id, drawNode(gNodes, cfg));
+          });
+
+          pillsWrap.innerHTML = "";
+          m.milestones.forEach((ms, i) => {
+            const p = document.createElement("button");
+            p.type = "button";
+            p.className = "ms-pill " + (ms.pillKind || "");
+            p.textContent = ms.label;
+            p.addEventListener("click", () => {
+              setPlaying(false);
+              u = ms.t;
+              scrub.value = String(Math.round(u * 1000));
+              updateFrame();
+            });
+            pillsWrap.appendChild(p);
+          });
+
+          updateFrame();
+        }
+
+        function activeMilestoneIdx(m, prog) {
+          let idx = 0;
+          m.milestones.forEach((ms, i) => {
+            const prevMid = i === 0 ? 0 : (m.milestones[i - 1].t + ms.t) / 2;
+            if (prog >= prevMid) idx = i;
+          });
+          return idx;
+        }
+
+        function setPlaying(on) {
+          playing = on;
+          btnPlay.textContent = on ? "⏸ 暂停" : "▶ 播放";
+        }
+
+        // Lightweight attribute-only update per animation frame (zero innerHTML rebuilds)
+        function updateFrame() {
+          const m = MODES[modeIdx];
+          const idx = activeMilestoneIdx(m, u);
+          const ms = m.milestones[idx];
+
+          [...pillsWrap.children].forEach((p, i) => p.classList.toggle("active", i === idx));
+          caption.innerHTML = ms.cap;
+          clock.textContent = `${(u * m.cycleSec).toFixed(1)}s / ${m.cycleSec}s`;
+
+          // Update Invariant 1 status card without shifting heights
+          inv1.className = "inv-card " + ms.inv1;
+          b1.textContent = ms.inv1Txt;
+          s1.textContent = ms.inv1 === "fail"
+            ? "旧轮回执在 Step 4 穿透写入新上下文"
+            : (ms.inv1 === "warn" ? "状态合并或等待期间存在潜在竞态窗口" : "旧轮次迟到回执不得写入当前上下文");
+
+          // Highlight active node gently
+          nodeMap.forEach((obj, id) => {
+            const isActive = id === ms.node;
+            obj.rect.setAttribute("stroke-width", isActive ? "2.6" : (m.nodes.find(x => x.id === id).sw || "1.6"));
+          });
+
+          // Move signal bead along active edge during transition window
+          if (ms.edge && edgeMap.has(ms.edge)) {
+            const prevT = idx === 0 ? 0 : m.milestones[idx - 1].t;
+            const localRatio = clamp((u - prevT) / Math.max(0.08, ms.t - prevT), 0, 1);
+            const pt = samplePath(edgeMap.get(ms.edge).path, localRatio);
+            bead.setAttribute("cx", f1(pt.x));
+            bead.setAttribute("cy", f1(pt.y));
+            bead.setAttribute("fill", ms.inv1 === "fail" ? "#DC2626" : (ms.inv1 === "warn" ? "#B45309" : (modeIdx === 2 && idx === 3 ? "#0F766E" : "#1D4ED8")));
+            bead.setAttribute("visibility", "visible");
+          } else {
+            bead.setAttribute("visibility", "hidden");
+          }
+        }
+
+        modeBtns.forEach(b => {
+          b.addEventListener("click", () => {
+            modeIdx = Number(b.dataset.mode);
+            u = MODES[modeIdx].milestones[modeIdx === 1 ? 4 : 2].t;
+            scrub.value = String(Math.round(u * 1000));
+            setPlaying(false);
+            rebuildScene();
+          });
+        });
+
+        btnPlay.addEventListener("click", () => setPlaying(!playing));
+        btnPrev.addEventListener("click", () => {
+          setPlaying(false);
+          const m = MODES[modeIdx];
+          const idx = (activeMilestoneIdx(m, u) + m.milestones.length - 1) % m.milestones.length;
+          u = m.milestones[idx].t;
+          scrub.value = String(Math.round(u * 1000));
+          updateFrame();
+        });
+        btnNext.addEventListener("click", () => {
+          setPlaying(false);
+          const m = MODES[modeIdx];
+          const idx = (activeMilestoneIdx(m, u) + 1) % m.milestones.length;
+          u = m.milestones[idx].t;
+          scrub.value = String(Math.round(u * 1000));
+          updateFrame();
+        });
+        scrub.addEventListener("input", () => {
+          setPlaying(false);
+          u = Number(scrub.value) / 1000;
+          updateFrame();
+        });
+        speedBtns.forEach(b => {
+          b.addEventListener("click", () => {
+            speedMul = Number(b.dataset.sp);
+            speedBtns.forEach(x => x.classList.toggle("active", x === b));
+          });
+        });
+
+        let prev = performance.now();
+        function tick(now) {
+          const dt = Math.min(0.05, (now - prev) / 1000);
+          prev = now;
+          if (playing) {
+            const cycle = MODES[modeIdx].cycleSec;
+            u = (u + (dt / cycle) * speedMul) % 1;
+            scrub.value = String(Math.round(u * 1000));
+            updateFrame();
+          }
+          requestAnimationFrame(tick);
+        }
+
+        rebuildScene();
+        scrub.value = String(Math.round(u * 1000));
+        requestAnimationFrame(tick);
+      })();
+
+      /* =========================================================================
+         图 2：NoDeadlock 终态可达检验
+         ========================================================================= */
+      (function initFig2() {
+        const svg = document.getElementById("svg-v1-deadlock");
+        const gEdges = document.getElementById("v1d-edges");
+        const gNodes = document.getElementById("v1d-nodes");
+        const bead = document.getElementById("v1d-bead");
+
+        const modeBtns = [...document.querySelectorAll("#v1d-modes .mode-btn")];
+        const btnPrev = document.getElementById("v1d-prev");
+        const btnPlay = document.getElementById("v1d-play");
+        const btnNext = document.getElementById("v1d-next");
+        const scrub = document.getElementById("v1d-scrub");
+        const clock = document.getElementById("v1d-clock");
+        const pillsWrap = document.getElementById("v1d-pills");
+        const caption = document.getElementById("v1d-caption");
+        const speedBtns = [...document.querySelectorAll("#v1d-speed button")];
+
+        attachSpotlight(svg);
+
+        const SCENES = [
+          {
+            cycleSec: 16,
+            nodes: [
+              { id: "wait", x: 16, y: 94, w: 146, h: 56, fill: "#F5F3FF", stroke: "#6D28D9", title: "高危工具待批", sub: "等待人工点击确认", titleCol: "#4C1D95", subCol: "#6D28D9", grp: "s0" },
+              { id: "timeout", x: 242, y: 94, w: 162, h: 56, fill: "#FFFBEB", stroke: "#B45309", title: "审批已超时作废", sub: "审批单已被定时器关闭", titleCol: "#92400E", subCol: "#B45309", grp: "s1" },
+              { id: "hang", x: 492, y: 90, w: 168, h: 64, fill: "#FEE2E2", stroke: "#DC2626", sw: "2.2", pulse: true, title: "回收挂起态 (孤岛)", sub: "✕ breaks NoDeadlock (0 条出边)", titleCol: "#991B1B", subCol: "#DC2626", grp: "s2" },
+              { id: "end", x: 696, y: 94, w: 110, h: 56, fill: "#F8FAFC", stroke: "#CBD5E1", dash: "4 3", title: "已干净终止", sub: "守卫阻塞不可达", titleCol: "#94A3B8", subCol: "#94A3B8", grp: "end" }
+            ],
+            edges: [
+              { id: "d0", d: "M 162 122 L 242 122", lx: 202, ly: 72, label: "审批超时", stroke: "#B45309", width: "2.1", marker: "dl-arr-red", textFill: "#B45309", pillBorder: "#FDE68A", grp: "s1" },
+              { id: "d1", d: "M 404 122 L 492 122", lx: 448, ly: 72, label: "并发：用户点取消", stroke: "#DC2626", width: "2.2", marker: "dl-arr-red", textFill: "#DC2626", pillBg: "#FEF2F2", pillBorder: "#FCA5A5", grp: "s2" },
+              { id: "d2", d: "M 660 122 L 696 122", lx: 640, ly: 182, label: "清理释放 [要求：原态 == 待审批] (恒假阻塞)", stroke: "#CBD5E1", dash: "4 3", marker: "dl-arr-muted", textFill: "#94A3B8", pillBorder: "#E2E8F0", grp: "end" },
+              { id: "d_ok", d: "M 89 150 C 89 228, 751 228, 751 150", lx: 416, ly: 224, label: "正常路径：用户直接批准或单纯取消", stroke: "#CBD5E1", marker: "dl-arr-muted", textFill: "#64748B", grp: "ok" }
+            ],
+            milestones: [
+              { t: 0.12, node: "wait", edge: null, pillKind: "", label: "Step 0: 待批起点", cap: "<b>NoDeadlock 检查 (Step 0)：</b>任务停在“高危工具待批”，准备接受审批、超时或用户主动取消。" },
+              { t: 0.42, node: "timeout", edge: "d0", pillKind: "is-warn", label: "Step 1: 审批超时先到", cap: "<b>Step 1 - 审批单先失效：</b>等待超时把审批单标为“已作废”，但异步清理尚未完成。" },
+              { t: 0.80, node: "hang", edge: "d1", pillKind: "is-break", label: "Step 2: 并发取消卡死 (0 出边)", cap: "<b>Step 2 - 死锁孤岛 (breaks 契约 3)：</b>用户在同毫秒点取消进入“回收挂起态”，但后续清理边要求 [原态 == 待审批]，导致没有任何出边可走！" }
+            ]
+          },
+          {
+            cycleSec: 16,
+            nodes: [
+              { id: "wait", x: 16, y: 94, w: 146, h: 56, fill: "#F5F3FF", stroke: "#6D28D9", title: "高危工具待批", sub: "等待人工点击确认", titleCol: "#4C1D95", subCol: "#6D28D9", grp: "s0" },
+              { id: "timeout", x: 242, y: 94, w: 162, h: 56, fill: "#FFFBEB", stroke: "#B45309", title: "审批已超时作废", sub: "审批单已被定时器关闭", titleCol: "#92400E", subCol: "#B45309", grp: "s1" },
+              { id: "hang", x: 492, y: 94, w: 162, h: 56, fill: "#F5F3FF", stroke: "#6D28D9", title: "取消排空收口", sub: "无条件执行兜底清理", titleCol: "#4C1D95", subCol: "#6D28D9", grp: "s2" },
+              { id: "end", x: 696, y: 94, w: 110, h: 56, fill: "#F0FDFA", stroke: "#0F766E", sw: "2.0", title: "已干净终止", sub: "✓ 终态可达闭环", titleCol: "#115E59", subCol: "#0F766E", grp: "end" }
+            ],
+            edges: [
+              { id: "d0", d: "M 162 122 L 242 122", lx: 202, ly: 72, label: "审批超时", stroke: "#B45309", marker: "dl-arr-teal", textFill: "#B45309", pillBorder: "#FDE68A", grp: "s1" },
+              { id: "d1", d: "M 404 122 L 492 122", lx: 448, ly: 72, label: "并发：用户点取消", stroke: "#0F766E", marker: "dl-arr-teal", textFill: "#0F766E", pillBorder: "#99F6E4", grp: "s2" },
+              { id: "d2", d: "M 654 122 L 696 122", lx: 580, ly: 182, label: "兜底强制清理 [无论审批前态是否已作废]", stroke: "#0F766E", width: "2.2", marker: "dl-arr-teal", textFill: "#0F766E", pillBg: "#F0FDFA", pillBorder: "#5EEAD4", grp: "end" },
+              { id: "d_loop", d: "M 730 94 C 722 50, 780 50, 772 94", lx: 751, ly: 48, label: "终态保持 (NoDeadlock)", stroke: "#0F766E", dash: "3 2", marker: "dl-arr-teal", textFill: "#0F766E", pillBorder: "#99F6E4", grp: "end" }
+            ],
+            milestones: [
+              { t: 0.12, node: "wait", edge: null, pillKind: "", label: "Step 0: 待批起点", cap: "<b>补齐兜底出口 (Step 0)：</b>同样从“高危工具待批”出发，重演完全相同的并发时序。" },
+              { t: 0.44, node: "hang", edge: "d1", pillKind: "", label: "Step 1-2: 超时撞上取消", cap: "<b>Step 1-2 - 进入排空收口：</b>哪怕审批单已超时作废，系统仍允许取消事件统一归入排空收口。" },
+              { t: 0.84, node: "end", edge: "d2", pillKind: "", label: "Step 3: 兜底回收进终态", cap: "<b>Step 3 - 契约 3 恒成立：</b>无条件兜底释放句柄并进入“已干净终止”，外加显式“终态保持”，全图彻底消灭卡死态。" }
+            ]
+          }
+        ];
+
+        let fixedIdx = 0;
+        let u = 0.80;
+        let playing = false;
+        let speedMul = 1.0;
+
+        let edgeMap = new Map();
+        let nodeMap = new Map();
+
+        function rebuild() {
+          const sc = SCENES[fixedIdx];
+          modeBtns.forEach((b, i) => b.classList.toggle("active", i === fixedIdx));
+          gEdges.innerHTML = "";
+          gNodes.innerHTML = "";
+          edgeMap.clear();
+          nodeMap.clear();
+
+          sc.edges.forEach(cfg => edgeMap.set(cfg.id, drawEdge(gEdges, cfg)));
+          sc.nodes.forEach(cfg => nodeMap.set(cfg.id, drawNode(gNodes, cfg)));
+
+          pillsWrap.innerHTML = "";
+          sc.milestones.forEach(ms => {
+            const p = document.createElement("button");
+            p.type = "button";
+            p.className = "ms-pill " + (ms.pillKind || "");
+            p.textContent = ms.label;
+            p.addEventListener("click", () => {
+              setPlaying(false);
+              u = ms.t;
+              scrub.value = String(Math.round(u * 1000));
+              update();
+            });
+            pillsWrap.appendChild(p);
+          });
+          update();
+        }
+
+        function setPlaying(on) {
+          playing = on;
+          btnPlay.textContent = on ? "⏸ 暂停" : "▶ 播放";
+        }
+
+        function activeIdx(sc, prog) {
+          let idx = 0;
+          sc.milestones.forEach((ms, i) => {
+            const prevMid = i === 0 ? 0 : (sc.milestones[i - 1].t + ms.t) / 2;
+            if (prog >= prevMid) idx = i;
+          });
+          return idx;
+        }
+
+        function update() {
+          const sc = SCENES[fixedIdx];
+          const idx = activeIdx(sc, u);
+          const ms = sc.milestones[idx];
+          [...pillsWrap.children].forEach((p, i) => p.classList.toggle("active", i === idx));
+          caption.innerHTML = ms.cap;
+          clock.textContent = `${(u * sc.cycleSec).toFixed(1)}s / ${sc.cycleSec}s`;
+
+          nodeMap.forEach((obj, id) => {
+            const base = sc.nodes.find(x => x.id === id);
+            obj.rect.setAttribute("stroke-width", id === ms.node ? "2.6" : (base.sw || "1.6"));
+          });
+
+          if (ms.edge && edgeMap.has(ms.edge)) {
+            const prevT = idx === 0 ? 0 : sc.milestones[idx - 1].t;
+            const r = clamp((u - prevT) / Math.max(0.1, ms.t - prevT), 0, 1);
+            const pt = samplePath(edgeMap.get(ms.edge).path, r);
+            bead.setAttribute("cx", f1(pt.x));
+            bead.setAttribute("cy", f1(pt.y));
+            bead.setAttribute("fill", fixedIdx === 0 ? "#DC2626" : "#0F766E");
+            bead.setAttribute("visibility", "visible");
+          } else {
+            bead.setAttribute("visibility", "hidden");
+          }
+        }
+
+        modeBtns.forEach(b => {
+          b.addEventListener("click", () => {
+            fixedIdx = Number(b.dataset.fixed);
+            u = SCENES[fixedIdx].milestones[SCENES[fixedIdx].milestones.length - 1].t;
+            scrub.value = String(Math.round(u * 1000));
+            setPlaying(false);
+            rebuild();
+          });
+        });
+
+        btnPlay.addEventListener("click", () => setPlaying(!playing));
+        btnPrev.addEventListener("click", () => {
+          setPlaying(false);
+          const sc = SCENES[fixedIdx];
+          const idx = (activeIdx(sc, u) + sc.milestones.length - 1) % sc.milestones.length;
+          u = sc.milestones[idx].t;
+          scrub.value = String(Math.round(u * 1000));
+          update();
+        });
+        btnNext.addEventListener("click", () => {
+          setPlaying(false);
+          const sc = SCENES[fixedIdx];
+          const idx = (activeIdx(sc, u) + 1) % sc.milestones.length;
+          u = sc.milestones[idx].t;
+          scrub.value = String(Math.round(u * 1000));
+          update();
+        });
+        scrub.addEventListener("input", () => {
+          setPlaying(false);
+          u = Number(scrub.value) / 1000;
+          update();
+        });
+        speedBtns.forEach(b => {
+          b.addEventListener("click", () => {
+            speedMul = Number(b.dataset.sp);
+            speedBtns.forEach(x => x.classList.toggle("active", x === b));
+          });
+        });
+
+        let prev = performance.now();
+        function tick(now) {
+          const dt = Math.min(0.05, (now - prev) / 1000);
+          prev = now;
+          if (playing) {
+            const cycle = SCENES[fixedIdx].cycleSec;
+            u = (u + (dt / cycle) * speedMul) % 1;
+            scrub.value = String(Math.round(u * 1000));
+            update();
+          }
+          requestAnimationFrame(tick);
+        }
+
+        rebuild();
+        setPlaying(false);
+        scrub.value = String(Math.round(u * 1000));
+        requestAnimationFrame(tick);
+      })();
+
+      /* =========================================================================
+         三层防抖：首屏与视口宽度变化时锁定每个 .story-fig 高度
+         ========================================================================= */
+      const figs = [...document.querySelectorAll(".story-fig")];
+      let lockedW = 0;
+      function lockAllFigs() {
+        const w = Math.round(window.innerWidth);
+        if (Math.abs(w - lockedW) <= 1) return;
+        lockedW = w;
+        figs.forEach(fig => {
+          fig.style.height = "auto";
+          fig.style.height = `${fig.offsetHeight}px`;
+        });
+      }
+      window.addEventListener("resize", lockAllFigs);
+      lockAllFigs();
+    })();
+  </script>
+</body>
+</html>

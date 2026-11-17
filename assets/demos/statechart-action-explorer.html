@@ -1,0 +1,1302 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="use-iframe" content="true">
+  <meta name="html-box-height-mode" content="auto">
+  <title>动作析取推演与轨迹胶片示例 — lark-tech-storytelling</title>
+  <style>
+    :root {
+      --page-wrap: #F3F4F6;
+      --bg: #FFFFFF;
+      --subtle: #F8FAFC;
+      --ink: #0F172A;
+      --ink-2: #334155;
+      --muted: #64748B;
+      --faint: #94A3B8;
+      --hairline: #E2E8F0;
+      --border-strong: #CBD5E1;
+
+      --blue: #1D4ED8;
+      --blue-fill: #DBEAFE;
+      --blue-soft: #EFF6FF;
+
+      --teal: #0F766E;
+      --teal-fill: #CCFBF1;
+      --teal-soft: #F0FDFA;
+
+      --violet: #6D28D9;
+      --violet-fill: #EDE9FE;
+      --violet-soft: #F5F3FF;
+
+      --amber: #B45309;
+      --amber-fill: #FEF3C7;
+      --amber-soft: #FFFBEB;
+
+      --red: #DC2626;
+      --red-fill: #FEE2E2;
+      --red-soft: #FEF2F2;
+
+      --sans: -apple-system, BlinkMacSystemFont, "Inter", "PingFang SC", "Noto Sans SC", "Hiragino Sans GB", sans-serif;
+      --mono: "SF Mono", "JetBrains Mono", Menlo, Monaco, Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--page-wrap);
+      color: var(--ink);
+      font-family: var(--sans);
+      line-height: 1.75;
+      padding: 28px 16px 64px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .lark-page {
+      max-width: 880px;
+      margin: 0 auto;
+      background: var(--bg);
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05), 0 14px 36px rgba(15, 23, 42, 0.04);
+      padding: 46px 54px 60px;
+    }
+    @media (max-width: 680px) {
+      .lark-page { padding: 28px 20px 42px; }
+    }
+
+    h1.doc-title {
+      font-size: 27px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.32;
+      margin-bottom: 16px;
+      color: var(--ink);
+    }
+
+    .doc-lead {
+      border-left: 3px solid var(--ink);
+      padding: 4px 0 4px 16px;
+      margin-bottom: 28px;
+      color: var(--ink-2);
+      font-size: 14.8px;
+    }
+    .doc-lead p + p { margin-top: 6px; }
+
+    h2.sec-title {
+      font-size: 19.5px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      margin: 34px 0 12px;
+      color: var(--ink);
+    }
+
+    p.prose {
+      font-size: 15.5px;
+      color: var(--ink-2);
+      margin: 10px 0;
+    }
+    p.prose b { color: var(--ink); font-weight: 600; }
+
+    .cue-blue { background: var(--blue-soft); color: var(--blue); padding: 1px 6px; border-radius: 4px; font-weight: 500; font-size: 0.94em; }
+    .cue-teal { background: var(--teal-soft); color: var(--teal); padding: 1px 6px; border-radius: 4px; font-weight: 500; font-size: 0.94em; }
+    .cue-red { background: var(--red-soft); color: var(--red); padding: 1px 6px; border-radius: 4px; font-weight: 500; font-size: 0.94em; }
+    .hl-warm { background: #FEF3C7; padding: 1px 5px; border-radius: 3px; color: var(--ink); font-weight: 500; }
+
+    /* =========================================================================
+       Distill 纯白无界画布 + 动作析取验证台 + 轨迹胶片
+       ========================================================================= */
+    .story-fig {
+      margin: 22px 0 30px;
+      padding: 18px 0 16px;
+      border-top: 1px solid var(--hairline);
+      border-bottom: 1px solid var(--hairline);
+      background: #FFFFFF;
+      overflow: hidden;
+    }
+
+    .sf-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .sf-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .sf-tag {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--blue);
+      background: var(--blue-soft);
+      border: 1px solid rgba(29, 78, 216, 0.22);
+      padding: 2px 7px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+    .sf-title {
+      font-size: 14.5px;
+      font-weight: 600;
+      color: var(--ink);
+    }
+
+    .top-bar-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .script-switch {
+      display: inline-flex;
+      background: #F1F5F9;
+      padding: 3px;
+      border-radius: 8px;
+      gap: 3px;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+    }
+    .mode-btn {
+      appearance: none;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font-family: var(--sans);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 5px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+    .mode-btn:hover { color: var(--ink); }
+    .mode-btn.active {
+      background: #FFFFFF;
+      color: var(--ink);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+    }
+
+    .guard-toggle {
+      appearance: none;
+      border: 1px solid var(--border-strong);
+      background: #FFFFFF;
+      color: var(--ink-2);
+      font-family: var(--sans);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 7px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.16s ease;
+    }
+    .guard-toggle.on {
+      background: var(--teal-soft);
+      border-color: var(--teal);
+      color: var(--teal);
+    }
+
+    /* 实时契约校验条 */
+    .inv-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    @media (max-width: 680px) {
+      .inv-strip { grid-template-columns: repeat(2, 1fr); }
+    }
+    .inv-tile {
+      background: var(--subtle);
+      border: 1px solid var(--hairline);
+      border-radius: 8px;
+      padding: 6px 10px;
+      height: 46px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .inv-tile.ok { background: var(--teal-soft); border-color: rgba(15, 118, 110, 0.25); }
+    .inv-tile.fail { background: var(--red-soft); border-color: rgba(220, 38, 38, 0.4); }
+    .inv-tile .it-lbl {
+      font-size: 10.5px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .inv-tile .it-val {
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--ink);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .inv-tile.ok .it-val { color: var(--teal); }
+    .inv-tile.fail .it-val { color: var(--red); }
+
+    .sf-canvas {
+      width: 100%;
+      background: #FFFFFF;
+      overflow: hidden;
+    }
+    .sf-canvas.ratio-exp { aspect-ratio: 820 / 326; }
+    .sf-canvas.ratio-tape { aspect-ratio: 820 / 264; }
+    .sf-canvas svg {
+      display: block;
+      width: 100%;
+      height: auto;
+      user-select: none;
+    }
+    .sf-canvas svg.spotlight [data-group] {
+      opacity: 0.22 !important;
+      transition: opacity 0.16s ease;
+    }
+    .sf-canvas svg.spotlight [data-group].lit {
+      opacity: 1 !important;
+    }
+
+    /* 控制栏 + 固定席位动作触发按钮条 */
+    .transport-bar {
+      margin-top: 10px;
+      background: var(--subtle);
+      border: 1px solid var(--hairline);
+      border-radius: 10px;
+      padding: 9px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .tb-main {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .tb-btns { display: inline-flex; align-items: center; gap: 4px; flex: none; }
+    .tp-btn {
+      appearance: none;
+      border: 1px solid var(--border-strong);
+      background: #FFFFFF;
+      color: var(--ink);
+      height: 28px;
+      padding: 0 9px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: var(--sans);
+      white-space: nowrap;
+    }
+    .tp-btn:hover { border-color: var(--ink); background: #F1F5F9; }
+    .tp-btn.primary { background: var(--ink); border-color: var(--ink); color: #FFFFFF; min-width: 72px; }
+    .tp-range {
+      flex: 1;
+      min-width: 120px;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 5px;
+      border-radius: 999px;
+      background: #CBD5E1;
+      outline: none;
+      cursor: pointer;
+    }
+    .tp-range::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--ink);
+      border: 2px solid #FFFFFF;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.3);
+      cursor: grab;
+    }
+    .tp-clock {
+      font-family: var(--mono);
+      font-size: 11.5px;
+      color: var(--muted);
+      min-width: 72px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    .tp-speed {
+      display: inline-flex;
+      background: #E2E8F0;
+      padding: 2px;
+      border-radius: 6px;
+      gap: 2px;
+      flex: none;
+    }
+    .tp-speed button {
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 7px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .tp-speed button.active { background: #FFFFFF; color: var(--ink); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08); }
+
+    /* 固定高度动作析取栏：合法动作高亮可点，非法动作置灰占住固定席位 */
+    .action-deck {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-wrap: nowrap;
+      overflow: hidden;
+      min-height: 28px;
+    }
+    .deck-lbl {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      white-space: nowrap;
+      flex: none;
+    }
+    .act-btn {
+      appearance: none;
+      border: 1px solid var(--blue);
+      background: #FFFFFF;
+      color: var(--blue);
+      font-family: var(--sans);
+      font-size: 11px;
+      font-weight: 600;
+      height: 25px;
+      padding: 0 7px;
+      border-radius: 999px;
+      cursor: pointer;
+      white-space: nowrap;
+      flex: none;
+      transition: all 0.14s ease;
+    }
+    .act-btn:hover:not(:disabled) {
+      background: var(--blue);
+      color: #FFFFFF;
+    }
+    .act-btn.danger:not(:disabled) {
+      border-color: var(--amber);
+      color: var(--amber);
+    }
+    .act-btn.danger:hover:not(:disabled) {
+      background: var(--amber);
+      color: #FFFFFF;
+    }
+    .act-btn:disabled {
+      border-color: var(--hairline);
+      background: #F1F5F9;
+      color: var(--faint);
+      cursor: not-allowed;
+    }
+    .act-btn.reset {
+      border-color: var(--border-strong);
+      color: var(--ink-2);
+      margin-left: auto;
+    }
+    .act-btn.reset:hover { background: #E2E8F0; color: var(--ink); }
+
+    .step-pills {
+      display: flex;
+      gap: 6px;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      scrollbar-width: none;
+      min-height: 26px;
+    }
+    .ms-pill {
+      appearance: none;
+      border: 1px solid var(--hairline);
+      background: #FFFFFF;
+      color: var(--muted);
+      font-family: var(--sans);
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+      white-space: nowrap;
+      flex: none;
+    }
+    .ms-pill.active { background: var(--ink); border-color: var(--ink); color: #FFFFFF; }
+
+    .sf-caption {
+      margin-top: 9px;
+      font-size: 13px;
+      color: var(--ink-2);
+      line-height: 22px;
+      height: 44px;
+      overflow: hidden;
+    }
+    .sf-caption b { color: var(--ink); font-weight: 600; }
+
+    .summary-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 14px;
+      font-size: 13.8px;
+    }
+    .summary-table th {
+      text-align: left;
+      padding: 9px 12px;
+      border-bottom: 1.5px solid var(--border-strong);
+      color: var(--ink);
+      font-weight: 600;
+      background: var(--subtle);
+    }
+    .summary-table td {
+      padding: 9px 12px;
+      border-bottom: 1px solid var(--hairline);
+      color: var(--ink-2);
+      vertical-align: top;
+    }
+  </style>
+</head>
+<body>
+  <!--
+    参考说明：本文件用于展示「飞书正文 + 可交互动作验证台与轨迹胶片」的完整文图呼应效果；
+    实际为飞书 <html5-block> 生成单个独立 HTML 图表时，请参考 ../interactive-svg-template.html 只输出纯白无界图表容器，不要外包 .lark-page 模拟页框。
+  -->
+  <article class="lark-page">
+    <h1 class="doc-title">可亲手走通的状态机：用动作析取台和轨迹胶片验证边界契约</h1>
+
+    <div class="doc-lead">
+      <p><b>设计出发点</b>：好的状态图不该只是墙上的静态装饰画，而应该让评审者顺着每一个合法动作亲自点一遍——看清系统在哪一步撞破了契约，又在打开守卫后如何自动折返安全态。</p>
+      <p><b>核心机制</b>：控制栏不仅保留了慢速巡演与步进器，还提供固定席位的<b>「读者动作析取栏」</b>，右侧内嵌固定高度的<b>「轨迹胶片报告」</b>，记录从起点出发走过的每一步编号路径。</p>
+    </div>
+
+    <!-- ==================== 第一节 ==================== -->
+    <h2 class="sec-title">1. 动作析取验证台：先看反例剧本回放，再亲手点一遍触发边界</h2>
+
+    <p class="prose">
+      下方验证台把复杂的并发流转拆成 6 个可读动作。你可以先切换顶部的预设剧本（如<span class="cue-red">剧本 B：4 步迟到回执串写</span>或<span class="cue-red">剧本 C：3 步并发超时死锁</span>）慢放复盘，也可以随时点击底部蓝框里的<b>当前合法动作按钮</b>自己探索分支——再拨动右上角<span class="cue-teal">🛡 契约防线开关</span>，检验守卫如何把两条反例死路当场化解：
+    </p>
+
+    <!-- ==================== 图 1：离散动作验证台 + 内嵌 SVG 轨迹日志 ==================== -->
+    <section class="story-fig" id="fig-v3-explorer">
+      <div class="sf-header">
+        <div class="sf-title-wrap">
+          <span class="sf-tag">Action Disjunction / Live Trace</span>
+          <span class="sf-title">实时状态机与右侧轨迹报告（点按底部动作可从当前状态继续推演）</span>
+        </div>
+      </div>
+
+      <div class="top-bar-row">
+        <div class="script-switch" id="v3-scripts">
+          <button type="button" class="mode-btn" data-sc="happy">剧本 A: 标准审批完结</button>
+          <button type="button" class="mode-btn active" data-sc="stale">剧本 B: 迟到回执串写 (4 步)</button>
+          <button type="button" class="mode-btn" data-sc="deadlock">剧本 C: 并发超时死锁 (3 步)</button>
+        </div>
+        <button type="button" class="guard-toggle" id="v3-guard">🛡 契约防线：已关闭 (暴露漏洞)</button>
+      </div>
+
+      <div class="inv-strip">
+        <div class="inv-tile ok" id="v3-i1">
+          <span class="it-lbl">契约 1 - 单轮隔离</span>
+          <span class="it-val" id="v3-i1-v">✓ 成立</span>
+        </div>
+        <div class="inv-tile ok" id="v3-i2">
+          <span class="it-lbl">契约 2 - 授权门禁</span>
+          <span class="it-val" id="v3-i2-v">✓ 成立</span>
+        </div>
+        <div class="inv-tile ok" id="v3-i3">
+          <span class="it-lbl">契约 3 - 终态可达 (NoDeadlock)</span>
+          <span class="it-val" id="v3-i3-v">✓ 可达</span>
+        </div>
+        <div class="inv-tile" id="v3-out">
+          <span class="it-lbl">当前态合法出边</span>
+          <span class="it-val" id="v3-out-v">1 条可触发</span>
+        </div>
+      </div>
+
+      <div class="sf-canvas ratio-exp">
+        <svg id="svg-v3-exp" viewBox="0 0 820 326" role="img" aria-label="可交互动作析取状态机与右侧轨迹胶片">
+          <defs>
+            <marker id="v3-arr-muted" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto">
+              <path d="M1 1.5 L9 5 L1 8.5 z" fill="#94A3B8"/>
+            </marker>
+            <marker id="v3-arr-blue" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M1 1.5 L9 5 L1 8.5 z" fill="#1D4ED8"/>
+            </marker>
+            <marker id="v3-arr-red" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto">
+              <path d="M1 1.5 L9 5 L1 8.5 z" fill="#DC2626"/>
+            </marker>
+            <marker id="v3-arr-teal" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M1 1.5 L9 5 L1 8.5 z" fill="#0F766E"/>
+            </marker>
+          </defs>
+
+          <!-- 左区：状态机图 -->
+          <g id="v3-edges"></g>
+          <g id="v3-nodes"></g>
+
+          <!-- 右区：SVG 内嵌固定高度轨迹日志框（杜绝 HTML 撑高文档） -->
+          <rect x="548" y="14" width="258" height="298" rx="10" fill="#F8FAFC" stroke="#CBD5E1"/>
+          <text x="564" y="36" font-size="12" font-weight="700" fill="#0F172A">执行轨迹报告 (Trace Log)</text>
+          <text x="792" y="36" text-anchor="end" font-family="var(--mono)" font-size="10" fill="#64748B" id="v3-trace-mode">剧本回放中</text>
+          <g id="v3-trace-rows"></g>
+          <text x="564" y="298" font-family="var(--mono)" font-size="10" fill="#64748B" id="v3-trace-foot">提示：可随时点击下方动作接管推演</text>
+        </svg>
+      </div>
+
+      <div class="transport-bar">
+        <div class="tb-main">
+          <div class="tb-btns">
+            <button type="button" class="tp-btn" id="v3-prev">◀ 上一步</button>
+            <button type="button" class="tp-btn primary" id="v3-play">▶ 巡演剧本</button>
+            <button type="button" class="tp-btn" id="v3-next">下一步 ▶</button>
+          </div>
+          <input type="range" class="tp-range" id="v3-scrub" min="0" max="1000" value="0" aria-label="剧本步进滑块">
+          <span class="tp-clock" id="v3-clock">Step 0 / 4</span>
+          <div class="tp-speed" id="v3-speed">
+            <button type="button" data-sp="0.5">0.5×</button>
+            <button type="button" data-sp="1" class="active">1.0×</button>
+            <button type="button" data-sp="1.5">1.5×</button>
+          </div>
+        </div>
+        <div class="action-deck" id="v3-deck">
+          <span class="deck-lbl">动作：</span>
+          <button type="button" class="act-btn" data-act="start_tool">发起工具</button>
+          <button type="button" class="act-btn" data-act="approve">批准</button>
+          <button type="button" class="act-btn danger" data-act="timeout">超时</button>
+          <button type="button" class="act-btn danger" data-act="cancel">取消</button>
+          <button type="button" class="act-btn" data-act="finish">按时回包</button>
+          <button type="button" class="act-btn" data-act="new_turn">开新一轮</button>
+          <button type="button" class="act-btn danger" data-act="stale_reply">迟到回包</button>
+          <button type="button" class="act-btn" data-act="fallback">兜底释放</button>
+          <button type="button" class="act-btn reset" id="v3-reset">🔄 重置</button>
+        </div>
+      </div>
+
+      <p class="sf-caption" id="v3-caption"></p>
+    </section>
+
+    <!-- ==================== 第二节 ==================== -->
+    <h2 class="sec-title">2. 编号反例胶片：把两条最短 Bug 路径定格成可对照的工程证据</h2>
+
+    <p class="prose">
+      当线上出现复杂状态机故障或新方案评审时，与其用大段文字口头复述“假如 A 发生的同时 B 又点了一下”，不如直接拉出一条<b>编号轨迹胶片（Counterexample Filmstrip）</b>：把状态转换拆成清晰的左向右步进帧，标出第几步进入风险区、第几步正式撞破哪条契约——以及开启修复守卫后，同一串输入序列如何被精准分流进<span class="cue-teal">安全闭环</span>：
+    </p>
+
+    <!-- ==================== 图 2：最短反例路径对照胶片 ==================== -->
+    <section class="story-fig" id="fig-v3-tape">
+      <div class="sf-header">
+        <div class="sf-title-wrap">
+          <span class="sf-tag">Counterexample Filmstrip</span>
+          <span class="sf-title">双线最短反例胶片对照（切换是否套用修复守卫）</span>
+        </div>
+        <div class="script-switch" id="v3t-modes">
+          <button type="button" class="mode-btn active" data-mode="0">修复前：两条最短反例直击破缺</button>
+          <button type="button" class="mode-btn" data-mode="1">修复后：同输入序列安全闭环</button>
+        </div>
+      </div>
+
+      <div class="sf-canvas ratio-tape">
+        <svg id="svg-v3-tape" viewBox="0 0 820 264" role="img" aria-label="两条最短反例胶片修复前后对照图">
+          <g id="v3t-frames"></g>
+          <!-- 同步扫描框 -->
+          <rect id="v3t-cursor" x="142" y="18" width="130" height="222" rx="8" fill="none" stroke="#1D4ED8" stroke-width="2" stroke-dasharray="4 3" pointer-events="none"/>
+        </svg>
+      </div>
+
+      <div class="transport-bar">
+        <div class="tb-main">
+          <div class="tb-btns">
+            <button type="button" class="tp-btn" id="v3t-prev">◀ 上一帧</button>
+            <button type="button" class="tp-btn primary" id="v3t-play">▶ 播放</button>
+            <button type="button" class="tp-btn" id="v3t-next">下一帧 ▶</button>
+          </div>
+          <input type="range" class="tp-range" id="v3t-scrub" min="0" max="1000" value="1000" aria-label="反例胶片帧滑块">
+          <span class="tp-clock" id="v3t-clock">Step 4</span>
+          <div class="tp-speed" id="v3t-speed">
+            <button type="button" data-sp="0.5">0.5×</button>
+            <button type="button" data-sp="1" class="active">1.0×</button>
+          </div>
+        </div>
+        <div class="step-pills" id="v3t-pills"></div>
+      </div>
+
+      <p class="sf-caption" id="v3t-caption"></p>
+    </section>
+
+    <!-- ==================== 第三节：关键动作转移与契约防线核对表 ==================== -->
+    <h2 class="sec-title">3. 关键动作转移与契约防线核对表</h2>
+
+    <table class="summary-table">
+      <colgroup>
+        <col width="170"/>
+        <col width="280"/>
+        <col width="320"/>
+      </colgroup>
+      <thead>
+        <tr>
+          <th>输入动作 / 剧本</th>
+          <th>无防线时的状态表现</th>
+          <th>开启契约防线后的流转收口</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>迟到回包（剧本 B）</b></td>
+          <td>经过「取消排空 → 新一轮中」后，旧工具回执直接把状态推入「串写破缺」，违背单轮隔离契约。</td>
+          <td>命中 <code>[回执轮次 != 当前轮次]</code> 守卫后自环丢弃孤儿回执，继续稳定停留在「新一轮中」。</td>
+        </tr>
+        <tr>
+          <td><b>审批超时 + 取消（剧本 C）</b></td>
+          <td>从「高危待批 → 审批超时 → 回收挂起」后可用出边变为 <code>0</code> 条，暴露 <code>NoDeadlock</code> 死锁孤岛。</td>
+          <td>开放「兜底释放」转移边，使「回收挂起」在任意竞态顺序下都能收口至「干净终止」。</td>
+        </tr>
+        <tr>
+          <td><b>横向轨迹胶片对照</b></td>
+          <td>清晰标出两条反例序列从起点一步步进入隐患区并触发红灯破缺的编号节点。</td>
+          <td>同一输入序列重放时在第 4 步被守卫精准分流，两条轨道终点同步保持青绿安全闭环。</td>
+        </tr>
+      </tbody>
+    </table>
+  </article>
+
+  <script>
+    (() => {
+      const NS = "http://www.w3.org/2000/svg";
+      const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+      const f1 = n => n.toFixed(1);
+
+      function el(tag, attrs = {}, parent = null) {
+        const node = document.createElementNS(NS, tag);
+        for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+        if (parent) parent.appendChild(node);
+        return node;
+      }
+
+      /* =========================================================================
+         图 1：可交互离散动作状态机 + SVG 轨迹日志
+         ========================================================================= */
+      (function initExplorer() {
+        const gEdges = document.getElementById("v3-edges");
+        const gNodes = document.getElementById("v3-nodes");
+        const gTrace = document.getElementById("v3-trace-rows");
+        const traceMode = document.getElementById("v3-trace-mode");
+        const traceFoot = document.getElementById("v3-trace-foot");
+
+        const scriptBtns = [...document.querySelectorAll("#v3-scripts .mode-btn")];
+        const guardBtn = document.getElementById("v3-guard");
+
+        const i1Card = document.getElementById("v3-i1"), i1V = document.getElementById("v3-i1-v");
+        const i2Card = document.getElementById("v3-i2"), i2V = document.getElementById("v3-i2-v");
+        const i3Card = document.getElementById("v3-i3"), i3V = document.getElementById("v3-i3-v");
+        const outCard = document.getElementById("v3-out"), outV = document.getElementById("v3-out-v");
+
+        const btnPrev = document.getElementById("v3-prev");
+        const btnPlay = document.getElementById("v3-play");
+        const btnNext = document.getElementById("v3-next");
+        const scrub = document.getElementById("v3-scrub");
+        const clock = document.getElementById("v3-clock");
+        const speedBtns = [...document.querySelectorAll("#v3-speed button")];
+        const actBtns = [...document.querySelectorAll("#v3-deck .act-btn[data-act]")];
+        const resetBtn = document.getElementById("v3-reset");
+        const caption = document.getElementById("v3-caption");
+
+        const STATES = {
+          idle:     { x: 20,  y: 38,  w: 132, h: 46, title: "空闲待命", sub: "等待提问", bg: "#F8FAFC", stroke: "#94A3B8", col: "#0F172A" },
+          wait:     { x: 202, y: 38,  w: 140, h: 46, title: "高危待批", sub: "等待确认", bg: "#F5F3FF", stroke: "#6D28D9", col: "#4C1D95" },
+          run:      { x: 392, y: 38,  w: 132, h: 46, title: "工具运行", sub: "沙箱执行", bg: "#EFF6FF", stroke: "#1D4ED8", col: "#1E3A8A" },
+          timeout:  { x: 20,  y: 136, w: 132, h: 46, title: "审批超时", sub: "授权作废", bg: "#FFFBEB", stroke: "#B45309", col: "#92400E" },
+          done:     { x: 202, y: 136, w: 140, h: 46, title: "干净终止", sub: "终态保持", bg: "#F0FDFA", stroke: "#0F766E", col: "#115E59" },
+          drain:    { x: 392, y: 136, w: 132, h: 46, title: "取消排空", sub: "旧进程在途", bg: "#F5F3FF", stroke: "#6D28D9", col: "#4C1D95" },
+          deadlock: { x: 20,  y: 238, w: 132, h: 48, title: "回收挂起", sub: "并发死锁点", bg: "#FEE2E2", stroke: "#DC2626", col: "#991B1B" },
+          corrupt:  { x: 202, y: 238, w: 140, h: 48, title: "串写破缺", sub: "✕ 污染新轮", bg: "#FEE2E2", stroke: "#DC2626", col: "#991B1B" },
+          newr:     { x: 392, y: 238, w: 132, h: 48, title: "新一轮中", sub: "期待新回执", bg: "#EFF6FF", stroke: "#1D4ED8", col: "#1E3A8A" }
+        };
+
+        const EDGES_BASE = [
+          { from: "idle", act: "start_tool", to: "wait", label: "发起工具", d: "M 152 61 L 202 61", lx: 177, ly: 22 },
+          { from: "wait", act: "approve", to: "run", label: "批准", d: "M 342 61 L 392 61", lx: 367, ly: 22 },
+          { from: "wait", act: "timeout", to: "timeout", label: "超时", d: "M 224 84 L 106 136", lx: 158, ly: 102 },
+          { from: "wait", act: "cancel", to: "done", label: "直接取消", d: "M 272 84 L 272 136", lx: 272, ly: 110 },
+          { from: "run", act: "finish", to: "done", label: "按时回包", d: "M 412 84 L 320 136", lx: 355, ly: 102 },
+          { from: "run", act: "cancel", to: "drain", label: "取消", d: "M 458 84 L 458 136", lx: 458, ly: 110 },
+          { from: "timeout", act: "cancel", to: "deadlock", label: "并发取消", d: "M 86 182 L 86 238", lx: 86, ly: 210 },
+          { from: "drain", act: "new_turn", to: "newr", label: "开新一轮", d: "M 458 182 L 458 238", lx: 458, ly: 210 },
+          { from: "drain", act: "finish", to: "done", label: "排空完成", d: "M 392 159 L 342 159", lx: 367, ly: 159 }
+        ];
+
+        const ACT_NAMES = {
+          start_tool: "发起高危工具",
+          approve: "用户点击批准",
+          timeout: "审批等待超时",
+          cancel: "用户点击取消",
+          finish: "工具按时回包",
+          new_turn: "开启新一轮",
+          stale_reply: "旧工具迟到回包",
+          fallback: "兜底释放句柄"
+        };
+
+        const SCRIPTS = {
+          happy: {
+            label: "剧本 A",
+            steps: [
+              { act: null, msg: "初始态：系统空闲待命，三项契约均处于满足状态。" },
+              { act: "start_tool", msg: "Step 1：Agent 请求执行高危工具，进入人工审批门禁。" },
+              { act: "approve", msg: "Step 2：用户批准授权，沙箱开始安全运行工具。" },
+              { act: "finish", msg: "Step 3：工具按时返回回执，平滑收敛至“干净终止”终态。" }
+            ]
+          },
+          stale: {
+            label: "剧本 B",
+            steps: [
+              { act: null, msg: "初始态：准备重演“取消后立刻重问导致旧回执串写”的最短反例。" },
+              { act: "start_tool", msg: "Step 1：发起高危工具，等待批准。" },
+              { act: "approve", msg: "Step 2：批准工具在沙箱运行（轮次 #1 工具开始执行）。" },
+              { act: "cancel", msg: "Step 3：用户取消，旧进程仍在后台“取消排空”。" },
+              { act: "new_turn", msg: "Step 4：不等排空就开启“新一轮中”，此时迟到回执准备发难。" },
+              { act: "stale_reply", msg: "Step 5：旧工具迟到回包！观察防御开关对“串写 vs 拦截”的决定性差异。" }
+            ]
+          },
+          deadlock: {
+            label: "剧本 C",
+            steps: [
+              { act: null, msg: "初始态：准备重演“审批超时与取消并发撞车导致 0 出边死锁”的反例。" },
+              { act: "start_tool", msg: "Step 1：进入“高危待批”，开启审批倒计时。" },
+              { act: "timeout", msg: "Step 2：倒计时结束，审批单刚巧进入“审批超时”作废态。" },
+              { act: "cancel", msg: "Step 3：用户并发点击取消，落入“回收挂起”——观察可用出边是否为 0！" },
+              { act: "fallback", msg: "Step 4：开启防线后才拥有的“兜底释放”，让挂起态安全收敛到干净终态。" }
+            ]
+          }
+        };
+
+        let guardOn = false;
+        let scriptKey = "stale";
+        let playing = false;
+        let speedMul = 1.0;
+        let playCursor = 0; // fractional step index during script playback
+        let manualMode = false;
+        let trace = [{ state: "idle", actName: "起点初始化", note: "✓ 契约正常" }];
+
+        function getTransitions(stateId) {
+          const list = EDGES_BASE.filter(e => e.from === stateId).map(e => ({ ...e }));
+          if (stateId === "newr") {
+            if (!guardOn) {
+              list.push({
+                from: "newr", act: "stale_reply", to: "corrupt",
+                label: "旧回执 [未核验]", d: "M 392 262 L 342 262", lx: 367, ly: 230, kind: "bad"
+              });
+            } else {
+              list.push({
+                from: "newr", act: "stale_reply", to: "newr",
+                label: "丢弃孤儿 [轮次守卫]", d: "M 524 250 C 544 242, 544 282, 524 274", lx: 458, ly: 306, kind: "good"
+              });
+            }
+          }
+          if (stateId === "deadlock" && guardOn) {
+            list.push({
+              from: "deadlock", act: "fallback", to: "done",
+              label: "兜底释放", d: "M 136 238 L 222 182", lx: 176, ly: 210, kind: "good"
+            });
+          }
+          if (stateId === "done") {
+            // Terminal self-loop keeps NoDeadlock satisfied in valid end state
+          }
+          return list;
+        }
+
+        function currentState() {
+          return trace[trace.length - 1].state;
+        }
+
+        function applyAction(act) {
+          const cur = currentState();
+          const avail = getTransitions(cur);
+          const hit = avail.find(t => t.act === act);
+          if (!hit) return false;
+          let note = "✓ 正常转移";
+          if (hit.to === "corrupt") note = "✕ breaks 契约 1";
+          else if (hit.to === "deadlock" && !guardOn) note = "✕ 0 出边死锁";
+          else if (guardOn && (act === "stale_reply" || act === "fallback")) note = "✓ 守卫安全收口";
+          trace.push({ state: hit.to, actName: ACT_NAMES[act], note });
+          return true;
+        }
+
+        function renderGraph() {
+          gEdges.innerHTML = "";
+          const cur = currentState();
+          const allEdges = [
+            ...EDGES_BASE,
+            !guardOn
+              ? { from: "newr", act: "stale_reply", to: "corrupt", label: "旧回执 [未验]", d: "M 392 262 L 342 262", lx: 367, ly: 230, kind: "bad" }
+              : { from: "newr", act: "stale_reply", to: "newr", label: "丢弃孤儿 [轮次守卫]", d: "M 524 250 C 542 242, 542 282, 524 274", lx: 458, ly: 306, kind: "good" },
+            ...(guardOn ? [{ from: "deadlock", act: "fallback", to: "done", label: "兜底释放", d: "M 136 238 L 222 182", lx: 176, ly: 210, kind: "good" }] : [])
+          ];
+
+          allEdges.forEach(e => {
+            const isAvail = e.from === cur;
+            const col = e.kind === "bad" ? "#DC2626" : (e.kind === "good" ? "#0F766E" : (isAvail ? "#1D4ED8" : "#CBD5E1"));
+            const marker = e.kind === "bad" ? "v3-arr-red" : (e.kind === "good" ? "v3-arr-teal" : (isAvail ? "v3-arr-blue" : "v3-arr-muted"));
+            el("path", {
+              d: e.d, fill: "none", stroke: col,
+              "stroke-width": isAvail ? "2.1" : "1.4",
+              "stroke-dasharray": e.kind === "good" ? "4 2" : "",
+              "marker-end": `url(#${marker})`
+            }, gEdges);
+
+            const w = [...e.label].reduce((a, c) => a + (c.charCodeAt(0) > 127 ? 9.5 : 5.6), 12);
+            el("rect", {
+              x: f1(e.lx - w / 2), y: f1(e.ly - 8.5), width: f1(w), height: 17, rx: 8.5,
+              fill: "#FFFFFF", stroke: isAvail ? col : "#E2E8F0", "stroke-width": "0.9"
+            }, gEdges);
+            const lt = el("text", {
+              x: f1(e.lx), y: f1(e.ly + 0.5),
+              "text-anchor": "middle", "dominant-baseline": "central",
+              "font-size": "9.5", "font-weight": "600",
+              fill: isAvail || e.kind ? col : "#64748B"
+            }, gEdges);
+            lt.textContent = e.label;
+          });
+
+          gNodes.innerHTML = "";
+          Object.entries(STATES).forEach(([id, st]) => {
+            if (guardOn && id === "corrupt") {
+              // Ghost unreachable node when guarded
+              el("rect", { x: st.x, y: st.y, width: st.w, height: st.h, rx: 9, fill: "#F8FAFC", stroke: "#CBD5E1", "stroke-dasharray": "4 3" }, gNodes);
+              const gt1 = el("text", { x: st.x + st.w / 2, y: st.y + 20, "text-anchor": "middle", "dominant-baseline": "central", "font-size": "11.5", "font-weight": "600", fill: "#94A3B8" }, gNodes);
+              gt1.textContent = "串写态不可达";
+              const gt2 = el("text", { x: st.x + st.w / 2, y: st.y + 37, "text-anchor": "middle", "dominant-baseline": "central", "font-size": "9.5", fill: "#0F766E" }, gNodes);
+              gt2.textContent = "✓ 已被轮次守卫拦截";
+              return;
+            }
+            const isCur = id === cur;
+            if (isCur) {
+              el("rect", {
+                x: st.x - 4, y: st.y - 4, width: st.w + 8, height: st.h + 8, rx: 12,
+                fill: "none", stroke: (id === "corrupt" || id === "deadlock") && !guardOn ? "#DC2626" : "#1D4ED8",
+                "stroke-width": "2.2", "stroke-dasharray": "4 2"
+              }, gNodes);
+            }
+            el("rect", {
+              x: st.x, y: st.y, width: st.w, height: st.h, rx: 9,
+              fill: st.bg, stroke: st.stroke, "stroke-width": isCur ? "2.2" : "1.5"
+            }, gNodes);
+            const t1 = el("text", { x: st.x + st.w / 2, y: st.y + 18, "text-anchor": "middle", "dominant-baseline": "central", "font-size": "12", "font-weight": "700", fill: st.col }, gNodes);
+            t1.textContent = st.title;
+            const t2 = el("text", { x: st.x + st.w / 2, y: st.y + 36, "text-anchor": "middle", "dominant-baseline": "central", "font-size": "10", "font-weight": "600", fill: st.col, opacity: "0.85" }, gNodes);
+            t2.textContent = id === "deadlock" && guardOn ? "可由兜底边逃生" : st.sub;
+          });
+
+          // Render fixed 5 trace log slots in SVG
+          gTrace.innerHTML = "";
+          const recent = trace.slice(-5);
+          const offset = Math.max(0, trace.length - 5);
+          for (let i = 0; i < 5; i++) {
+            const y = 52 + i * 46;
+            const item = recent[i];
+            if (!item) {
+              el("rect", { x: 560, y, width: 234, height: 38, rx: 7, fill: "#FFFFFF", stroke: "#E2E8F0", "stroke-dasharray": "3 3" }, gTrace);
+              const emptyT = el("text", { x: 677, y: y + 19, "text-anchor": "middle", "dominant-baseline": "central", "font-size": "10.5", fill: "#CBD5E1" }, gTrace);
+              emptyT.textContent = "等待后续动作...";
+              continue;
+            }
+            const isBad = item.note.includes("✕");
+            const isGood = item.note.includes("守卫");
+            el("rect", {
+              x: 560, y, width: 234, height: 38, rx: 7,
+              fill: isBad ? "#FEF2F2" : (isGood ? "#F0FDFA" : "#FFFFFF"),
+              stroke: isBad ? "#FCA5A5" : (isGood ? "#5EEAD4" : "#CBD5E1")
+            }, gTrace);
+            const s1 = el("text", { x: 570, y: y + 13, "font-size": "10.5", "font-weight": "700", fill: "#0F172A" }, gTrace);
+            s1.textContent = `#${offset + i} ${item.actName} -> ${STATES[item.state].title}`;
+            const s2 = el("text", { x: 570, y: y + 29, "font-family": "var(--mono)", "font-size": "9.5", "font-weight": "600", fill: isBad ? "#DC2626" : (isGood ? "#0F766E" : "#64748B") }, gTrace);
+            s2.textContent = item.note;
+          }
+
+          // Update invariants and action buttons
+          const availActs = getTransitions(cur).map(t => t.act);
+          actBtns.forEach(b => {
+            b.disabled = !availActs.includes(b.dataset.act);
+          });
+
+          const isCorrupt = cur === "corrupt";
+          const isDead = cur === "deadlock" && !guardOn;
+          const isTerminal = cur === "done";
+
+          i1Card.className = "inv-tile " + (isCorrupt ? "fail" : "ok");
+          i1V.textContent = isCorrupt ? "✕ 违背单轮隔离" : "✓ 成立";
+
+          i2Card.className = "inv-tile ok";
+          i2V.textContent = "✓ 成立 (未越权)";
+
+          i3Card.className = "inv-tile " + (isDead ? "fail" : "ok");
+          i3V.textContent = isDead ? "✕ 0 出边卡死" : "✓ 终态可达";
+
+          outCard.className = "inv-tile " + (isDead ? "fail" : "ok");
+          outV.textContent = isTerminal ? "终态保持 (安全收口)" : `${availActs.length} 条可用动作`;
+          traceFoot.textContent = isDead ? "告警：非终态可用出边 = 0 (NoDeadlock 破缺)" : "提示：蓝框按钮可从当前状态继续触发";
+        }
+
+        function loadScriptStep(stepIdx) {
+          const sc = SCRIPTS[scriptKey];
+          const maxStep = sc.steps.length - 1;
+          const idx = clamp(Math.round(stepIdx), 0, maxStep);
+          trace = [{ state: "idle", actName: "起点初始化", note: "✓ 契约正常" }];
+          let captionText = sc.steps[0].msg;
+          for (let i = 1; i <= idx; i++) {
+            const ok = applyAction(sc.steps[i].act);
+            if (ok) captionText = sc.steps[i].msg;
+            else if (sc.steps[i].act === "fallback" && !guardOn) {
+              captionText = "<b>Step 4 受阻：</b>防线尚未开启，“回收挂起”没有任何兜底出边可以点按，必须打开上方契约防线！";
+              break;
+            }
+          }
+          caption.innerHTML = captionText;
+          clock.textContent = `Step ${idx} / ${maxStep}`;
+          scrub.value = String(Math.round((idx / Math.max(1, maxStep)) * 1000));
+          traceMode.textContent = manualMode ? "自由触发推演" : `${sc.label}回放`;
+          renderGraph();
+        }
+
+        function setPlaying(on) {
+          playing = on;
+          btnPlay.textContent = on ? "⏸ 暂停" : "▶ 巡演剧本";
+        }
+
+        scriptBtns.forEach(b => {
+          b.addEventListener("click", () => {
+            scriptKey = b.dataset.sc;
+            scriptBtns.forEach(x => x.classList.toggle("active", x === b));
+            manualMode = false;
+            setPlaying(false);
+            const maxStep = SCRIPTS[scriptKey].steps.length - 1;
+            playCursor = maxStep;
+            loadScriptStep(playCursor);
+          });
+        });
+
+        guardBtn.addEventListener("click", () => {
+          guardOn = !guardOn;
+          guardBtn.classList.toggle("on", guardOn);
+          guardBtn.textContent = guardOn ? "🛡 契约防线：已开启 (守卫拦截)" : "🛡 契约防线：已关闭 (暴露漏洞)";
+          if (!manualMode) loadScriptStep(playCursor);
+          else renderGraph();
+        });
+
+        actBtns.forEach(b => {
+          b.addEventListener("click", () => {
+            setPlaying(false);
+            manualMode = true;
+            const act = b.dataset.act;
+            if (applyAction(act)) {
+              const cur = currentState();
+              caption.innerHTML = `<b>手动触发「${ACT_NAMES[act]}」：</b>状态进入 <b>${STATES[cur].title}</b>，右侧轨迹日志已追加第 ${trace.length - 1} 步。`;
+              traceMode.textContent = "自由触发推演";
+              clock.textContent = `手动第 ${trace.length - 1} 步`;
+              renderGraph();
+            }
+          });
+        });
+
+        resetBtn.addEventListener("click", () => {
+          setPlaying(false);
+          manualMode = true;
+          trace = [{ state: "idle", actName: "手动重置", note: "✓ 回到起点" }];
+          caption.innerHTML = "<b>已重置回「空闲待命」：</b>请依次点击下方亮起的动作按钮，亲自走通正常路径或撞出死锁与串写。";
+          clock.textContent = "手动第 0 步";
+          traceMode.textContent = "自由触发推演";
+          renderGraph();
+        });
+
+        btnPlay.addEventListener("click", () => {
+          manualMode = false;
+          if (!playing) {
+            const maxStep = SCRIPTS[scriptKey].steps.length - 1;
+            if (playCursor >= maxStep) playCursor = 0;
+          }
+          setPlaying(!playing);
+        });
+        btnPrev.addEventListener("click", () => {
+          setPlaying(false);
+          manualMode = false;
+          const maxStep = SCRIPTS[scriptKey].steps.length - 1;
+          playCursor = (Math.round(playCursor) + maxStep) % (maxStep + 1);
+          loadScriptStep(playCursor);
+        });
+        btnNext.addEventListener("click", () => {
+          setPlaying(false);
+          manualMode = false;
+          const maxStep = SCRIPTS[scriptKey].steps.length - 1;
+          playCursor = (Math.round(playCursor) + 1) % (maxStep + 1);
+          loadScriptStep(playCursor);
+        });
+        scrub.addEventListener("input", () => {
+          setPlaying(false);
+          manualMode = false;
+          const maxStep = SCRIPTS[scriptKey].steps.length - 1;
+          playCursor = (Number(scrub.value) / 1000) * maxStep;
+          loadScriptStep(playCursor);
+        });
+        speedBtns.forEach(b => {
+          b.addEventListener("click", () => {
+            speedMul = Number(b.dataset.sp);
+            speedBtns.forEach(x => x.classList.toggle("active", x === b));
+          });
+        });
+
+        let prev = performance.now();
+        let lastInt = -1;
+        function tick(now) {
+          const dt = Math.min(0.05, (now - prev) / 1000);
+          prev = now;
+          if (playing && !manualMode) {
+            const maxStep = SCRIPTS[scriptKey].steps.length - 1;
+            // Slow pace: 1 step every ~3.2s at 1.0x
+            playCursor += (dt / 3.2) * speedMul;
+            if (playCursor > maxStep + 0.6) playCursor = 0;
+            const curInt = clamp(Math.floor(playCursor), 0, maxStep);
+            if (curInt !== lastInt) {
+              lastInt = curInt;
+              loadScriptStep(curInt);
+            }
+          }
+          requestAnimationFrame(tick);
+        }
+
+        // Start paused at Step 5 of Stale Replay so reader immediately sees the 5-step counterexample trace
+        playCursor = 5;
+        loadScriptStep(5);
+        requestAnimationFrame(tick);
+      })();
+
+      /* =========================================================================
+         图 2：最短反例胶片对照图谱
+         ========================================================================= */
+      (function initFilmstrip() {
+        const gFrames = document.getElementById("v3t-frames");
+        const cursor = document.getElementById("v3t-cursor");
+        const modeBtns = [...document.querySelectorAll("#v3t-modes .mode-btn")];
+        const btnPrev = document.getElementById("v3t-prev");
+        const btnPlay = document.getElementById("v3t-play");
+        const btnNext = document.getElementById("v3t-next");
+        const scrub = document.getElementById("v3t-scrub");
+        const clock = document.getElementById("v3t-clock");
+        const speedBtns = [...document.querySelectorAll("#v3t-speed button")];
+        const pillsWrap = document.getElementById("v3t-pills");
+        const caption = document.getElementById("v3t-caption");
+
+        const COL_X = [142, 276, 410, 544, 678];
+        const DATA = [
+          {
+            rows: [
+              {
+                name: "反例 A - 串写",
+                sub: "契约 1 (5 步)",
+                frames: [
+                  { title: "空闲待命", act: "起点", kind: "ok" },
+                  { title: "工具运行", act: "批准调用", kind: "ok" },
+                  { title: "取消排空", act: "点取消", kind: "warn" },
+                  { title: "新一轮中", act: "发新问", kind: "warn" },
+                  { title: "串写破缺", act: "旧回执到", kind: "bad" }
+                ]
+              },
+              {
+                name: "反例 B - 死锁",
+                sub: "契约 3 (3 步)",
+                frames: [
+                  { title: "空闲待命", act: "起点", kind: "ok" },
+                  { title: "高危待批", act: "发起工具", kind: "ok" },
+                  { title: "审批超时", act: "定时触发", kind: "warn" },
+                  { title: "回收挂起", act: "并发取消", kind: "bad" },
+                  { title: "0 出边卡死", act: "死锁孤岛", kind: "bad" }
+                ]
+              }
+            ],
+            caps: [
+              "<b>Step 0 - 同一起点：</b>两条反例路径均从健康的“空闲待命”出发。",
+              "<b>Step 1 - 业务推进：</b>工具调用或审批流程按预期步入等待与执行态。",
+              "<b>Step 2 - 隐患埋下：</b>一次取消排空或审批超时，让系统进入容易忽略的中间态。",
+              "<b>Step 3 - 并发碰撞：</b>新轮次或并发取消同时发生，反例 B 在此处已落入死锁孤岛。",
+              "<b>Step 4 - 契约破缺：</b>旧工具回执穿透边界导致串写，两条反例胶片同时标红。"
+            ]
+          },
+          {
+            rows: [
+              {
+                name: "反例 A - 守卫",
+                sub: "轮次号拦截",
+                frames: [
+                  { title: "空闲待命", act: "起点", kind: "ok" },
+                  { title: "工具运行", act: "绑定 #1", kind: "ok" },
+                  { title: "取消排空", act: "保留 #1", kind: "ok" },
+                  { title: "新一轮 #2", act: "轮次切换", kind: "ok" },
+                  { title: "安全丢弃", act: "守卫拦截", kind: "good" }
+                ]
+              },
+              {
+                name: "反例 B - 兜底",
+                sub: "终态可达",
+                frames: [
+                  { title: "空闲待命", act: "起点", kind: "ok" },
+                  { title: "高危待批", act: "发起工具", kind: "ok" },
+                  { title: "审批超时", act: "定时触发", kind: "ok" },
+                  { title: "排空收口", act: "并发取消", kind: "ok" },
+                  { title: "干净终止", act: "兜底释放", kind: "good" }
+                ]
+              }
+            ],
+            caps: [
+              "<b>Step 0 - 修复后对照：</b>同样输入序列回放，观察防线如何从源头带上标签。",
+              "<b>Step 1 - 绑定轮次：</b>工具请求绑定当前轮次 #1，为后续过滤建立依据。",
+              "<b>Step 2 - 保留语义：</b>哪怕发生取消或超时，状态依然显式保留排空与作废轨迹。",
+              "<b>Step 3 - 兜底合流：</b>并发取消不再卡死在挂起态，而是顺滑并入排空收口。",
+              "<b>Step 4 - 全部安全闭环：</b>迟到回执被守卫丢弃，挂起流顺畅进入干净终止终态。"
+            ]
+          }
+        ];
+
+        let modeIdx = 0;
+        let stepIdx = 4;
+        let playing = false;
+        let speedMul = 1.0;
+
+        function rebuild() {
+          modeBtns.forEach((b, i) => b.classList.toggle("active", i === modeIdx));
+          gFrames.innerHTML = "";
+          const d = DATA[modeIdx];
+          const COLORS = {
+            ok:   { bg: "#F8FAFC", st: "#CBD5E1", txt: "#0F172A", tag: "#64748B" },
+            warn: { bg: "#FFFBEB", st: "#F59E0B", txt: "#92400E", tag: "#B45309" },
+            bad:  { bg: "#FEE2E2", st: "#DC2626", txt: "#991B1B", tag: "#DC2626" },
+            good: { bg: "#F0FDFA", st: "#0F766E", txt: "#115E59", tag: "#0F766E" }
+          };
+
+          d.rows.forEach((row, rIdx) => {
+            const y = rIdx === 0 ? 32 : 146;
+            const lt = el("text", { x: 16, y: y + 32, "font-size": "12", "font-weight": "700", fill: "#0F172A" }, gFrames);
+            lt.textContent = row.name;
+            const ls = el("text", { x: 16, y: y + 50, "font-size": "10.5", fill: "#64748B" }, gFrames);
+            ls.textContent = row.sub;
+
+            row.frames.forEach((f, fIdx) => {
+              const x = COL_X[fIdx] + 6;
+              const c = COLORS[f.kind];
+              el("rect", { x, y, width: 118, height: 78, rx: 8, fill: c.bg, stroke: c.st, "stroke-width": f.kind === "bad" || f.kind === "good" ? "1.8" : "1.3" }, gFrames);
+              const t0 = el("text", { x: x + 59, y: y + 16, "text-anchor": "middle", "font-family": "var(--mono)", "font-size": "9.5", "font-weight": "700", fill: c.tag }, gFrames);
+              t0.textContent = `Step ${fIdx} / ${f.act}`;
+              const t1 = el("text", { x: x + 59, y: y + 44, "text-anchor": "middle", "font-size": "12", "font-weight": "700", fill: c.txt }, gFrames);
+              t1.textContent = f.title;
+              if (fIdx < 4) {
+                el("line", { x1: x + 119, y1: y + 39, x2: x + 133, y2: y + 39, stroke: "#CBD5E1", "stroke-width": "1.6" }, gFrames);
+              }
+            });
+          });
+
+          pillsWrap.innerHTML = "";
+          for (let i = 0; i <= 4; i++) {
+            const p = document.createElement("button");
+            p.type = "button";
+            p.className = "ms-pill";
+            p.textContent = `Step ${i}`;
+            p.addEventListener("click", () => {
+              setPlaying(false);
+              stepIdx = i;
+              update();
+            });
+            pillsWrap.appendChild(p);
+          }
+          update();
+        }
+
+        function setPlaying(on) {
+          playing = on;
+          btnPlay.textContent = on ? "⏸ 暂停" : "▶ 播放";
+        }
+
+        function update() {
+          cursor.setAttribute("x", String(COL_X[stepIdx]));
+          cursor.setAttribute("stroke", modeIdx === 0 && stepIdx >= 3 ? "#DC2626" : "#0F766E");
+          [...pillsWrap.children].forEach((p, i) => p.classList.toggle("active", i === stepIdx));
+          caption.innerHTML = DATA[modeIdx].caps[stepIdx];
+          clock.textContent = `Step ${stepIdx} / 4`;
+          scrub.value = String(Math.round((stepIdx / 4) * 1000));
+        }
+
+        modeBtns.forEach(b => {
+          b.addEventListener("click", () => {
+            modeIdx = Number(b.dataset.mode);
+            setPlaying(false);
+            rebuild();
+          });
+        });
+        btnPlay.addEventListener("click", () => setPlaying(!playing));
+        btnPrev.addEventListener("click", () => {
+          setPlaying(false);
+          stepIdx = (stepIdx + 4) % 5;
+          update();
+        });
+        btnNext.addEventListener("click", () => {
+          setPlaying(false);
+          stepIdx = (stepIdx + 1) % 5;
+          update();
+        });
+        scrub.addEventListener("input", () => {
+          setPlaying(false);
+          stepIdx = Math.round((Number(scrub.value) / 1000) * 4);
+          update();
+        });
+        speedBtns.forEach(b => {
+          b.addEventListener("click", () => {
+            speedMul = Number(b.dataset.sp);
+            speedBtns.forEach(x => x.classList.toggle("active", x === b));
+          });
+        });
+
+        let acc = 0;
+        let prev = performance.now();
+        function tick(now) {
+          const dt = Math.min(0.05, (now - prev) / 1000);
+          prev = now;
+          if (playing) {
+            acc += dt * speedMul;
+            if (acc >= 3.0) {
+              acc = 0;
+              stepIdx = (stepIdx + 1) % 5;
+              update();
+            }
+          }
+          requestAnimationFrame(tick);
+        }
+
+        rebuild();
+        requestAnimationFrame(tick);
+      })();
+
+      /* =========================================================================
+         三层防抖：固定所有 .story-fig 容器高度
+         ========================================================================= */
+      const figs = [...document.querySelectorAll(".story-fig")];
+      let lockedW = 0;
+      function lockAllFigs() {
+        const w = Math.round(window.innerWidth);
+        if (Math.abs(w - lockedW) <= 1) return;
+        lockedW = w;
+        figs.forEach(fig => {
+          fig.style.height = "auto";
+          fig.style.height = `${fig.offsetHeight}px`;
+        });
+      }
+      window.addEventListener("resize", lockAllFigs);
+      lockAllFigs();
+    })();
+  </script>
+</body>
+</html>
