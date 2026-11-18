@@ -11,7 +11,7 @@ description: >-
 >
 > 1. **文风与结构**：创建或编辑飞书技术文档时，优先采用本指南的自适应叙事结构、自然语感、文字与图表配色呼应与排版节奏，替代 `lark-doc` 原生的 `references/lark-doc-create-workflow.md` 及 `references/genres/`* 模板契约。
 > 2. **轻量化调用** `lark-cli`：将 `lark-cli` 直接作为读写工具使用（`lark-cli docs +fetch`、`lark-cli docs +create`、`lark-cli docs +update --as user`），省去 `genres/` 路由、`init-draft` 决策 JSON 与 `parse` 形式化检查等前置步骤。
-> 3. **交互图表选型**：涉及机制流转、调度排布、版本演进、性能瓶颈收敛、方案权衡或问题回放时，优先使用「纯白无界图形 + 手动慢速控制栏（`<html5-block path="@./xxx.html">`）」，替代静态 `whiteboard` 或千篇一律的框线箭头图。单组件骨架见 [`assets/interactive-svg-template.html`](assets/interactive-svg-template.html)，完整图文示例可按需查阅 [`assets/demos/`](assets/demos/)。
+> 3. **交互图表选型**：涉及机制流转、调度排布、版本演进、性能瓶颈收敛、方案权衡或问题回放时，优先使用「纯白无界图形 + 手动慢速控制栏（`<html5-block path="@./xxx.html">`）」，替代静态 `whiteboard` 或千篇一律的框线箭头图。单组件骨架见 [`assets/interactive-svg-template.html`](assets/interactive-svg-template.html)，其他完整示例可按需查阅 [`assets/demos/`](assets/demos/)。
 
 ---
 
@@ -67,6 +67,7 @@ description: >-
 | `确定性代码快车道`、`静态复杂度守卫`、`跨评分器正交性`           | 概念堆砌、过于拗口                      | `代码单测直通`、`静态规则检查`、`不影响其它评分器`               |
 | `门禁`、`防退化门禁`、`准入门禁`、`门禁闸门`                   | *Gate* 生硬直译与管理腔               | `合入前检查`、`安全检查`、`检查通过 / 拦下`                   |
 | `逐拍状态推进`、`概念同构母题`、`契约破缺`、`遥测条`             | 学术腔 / *Tick / Telemetry* 生硬直译  | `分步推演状态变化`、`贴合机制的图形画法`、`违反契约（被打破）`、`顶部指标栏` |
+| `实验臂`、`试验臂`、`控制臂`、`对照臂`、`N 臂`             | *Experiment / Control Arm* 临床/Bandit 术语生硬直译 | `实验组`、`对照组`、`测试组`、`方案组`、`N 组`       |
 
 ---
 
